@@ -1,59 +1,107 @@
-import { useState } from 'react';
-import { Search, Plus, Grid, List, Filter, Edit, Trash2, Eye } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Plus, Grid, List, Edit, Trash2, Eye, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-interface Product {
-  id: number;
-  name: string;
-  price: string;
-  images: string[];
-  category: {
-    name: string;
-  };
-}
+import { productService, type Product } from '../services/productService';
+import { categoryService } from '../services/categoryService';
+import { CATEGORY_MENU, type MainMenuKey } from '../constants/categoryMenu';
 
 const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [selectedMainMenu, setSelectedMainMenu] = useState<MainMenuKey | ''>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample products data
-  const products: Product[] = [
-    {
-      id: 1,
-      name: 'Apple Watch Series 4',
-      price: '120.00',
-      images: ['https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=400'],
-      category: { name: 'Wearables' }
-    },
-    {
-      id: 2,
-      name: 'Air-Max-270',
-      price: '60.00',
-      images: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400'],
-      category: { name: 'Footwear' }
-    },
-    {
-      id: 3,
-      name: 'Minimal Chair Tool',
-      price: '24.59',
-      images: ['https://images.unsplash.com/photo-1503602642458-232111445657?w=400'],
-      category: { name: 'Furniture' }
-    },
-  ];
+  // Fetch all products initially
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await productService.getAllProducts();
+        setAllProducts(response.products);
+        setProducts(response.products);
+        setError(null);
+      } catch (err) {
+        setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchProducts();
+  }, []);
+
+  // Fetch products when subcategory changes
+  useEffect(() => {
+    if (selectedSubcategory) {
+      const fetchCategoryProducts = async () => {
+        try {
+          setLoading(true);
+          const response = await categoryService.getProductsByCategory(selectedSubcategory);
+          setProducts(response.products || []);
+          setError(null);
+        } catch (err) {
+          console.error('Error fetching category products:', err);
+          setProducts([]);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchCategoryProducts();
+    } else {
+      setProducts(allProducts);
+    }
+  }, [selectedSubcategory, allProducts]);
+
+  // Handle main menu click
+  const handleMainMenuClick = (key: MainMenuKey) => {
+    if (selectedMainMenu === key) {
+      setSelectedMainMenu('');
+      setSelectedCategory('');
+      setSelectedSubcategory('');
+    } else {
+      setSelectedMainMenu(key);
+      setSelectedCategory('');
+      setSelectedSubcategory('');
+    }
+  };
+
+  // Handle category click
+  const handleCategoryClick = (categoryTitle: string) => {
+    setSelectedCategory(categoryTitle === selectedCategory ? '' : categoryTitle);
+    setSelectedSubcategory('');
+  };
+
+  // Handle subcategory click
+  const handleSubcategoryClick = (subcategoryName: string) => {
+    setSelectedSubcategory(subcategoryName);
+  };
+
+  // Filter products by search
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Get selected menu data
+  const selectedMenuData = selectedMainMenu ? CATEGORY_MENU[selectedMainMenu] : null;
+  const selectedCategoryData = selectedMenuData?.categories.find(cat => cat.title === selectedCategory);
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
             Products
           </h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium">Manage your product inventory</p>
+          <p className="text-sm text-gray-500 mt-1 font-medium">
+            {loading ? 'Đang tải...' : `${filteredProducts.length} sản phẩm`}
+          </p>
         </div>
         <Link
           to="/products/add"
@@ -64,151 +112,279 @@ const Products = () => {
         </Link>
       </div>
 
-      {/* Filters & Search Bar */}
-      <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-soft p-6 border border-gray-100">
+      {/* Search Bar */}
+      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl shadow-lg p-5 border-2 border-blue-200">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search */}
           <div className="flex-1">
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors z-10" size={20} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-blue-400 group-hover:text-blue-600 transition-colors z-10" size={22} />
               <input
                 type="text"
-                placeholder="Search products by name, category..."
+                placeholder="🔍 Tìm kiếm sản phẩm theo tên..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+                className="w-full pl-14 pr-5 py-4 bg-white border-2 border-blue-200 rounded-xl text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 placeholder:text-blue-300"
               />
             </div>
           </div>
 
-          {/* View Mode & Filter */}
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 transition-all duration-200 shadow-sm hover:shadow">
-              <Filter size={18} />
-              <span className="hidden sm:inline">Filter</span>
+          {/* View Mode */}
+          <div className="flex items-center gap-2 bg-white border-2 border-blue-200 rounded-xl p-1.5 shadow-md">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-3 rounded-lg transition-all duration-300 ${
+                viewMode === 'grid'
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg scale-105'
+                  : 'text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              <Grid size={20} />
             </button>
-            <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'grid'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <Grid size={18} />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 rounded-lg transition-all duration-200 ${
-                  viewMode === 'list'
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md'
-                    : 'text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                <List size={18} />
-              </button>
-            </div>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-3 rounded-lg transition-all duration-300 ${
+                viewMode === 'list'
+                  ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white shadow-lg scale-105'
+                  : 'text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              <List size={20} />
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Products Grid/List */}
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product, index) => (
-            <div
-              key={product.id}
-              className="group bg-white rounded-2xl shadow-soft hover:shadow-soft-lg transition-all duration-300 overflow-hidden border border-gray-100 animate-slide-up"
-              style={{ animationDelay: `${index * 100}ms` }}
+      {/* Main Menu Categories */}
+      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50/50 rounded-2xl shadow-lg p-6 border border-blue-100">
+        <h2 className="text-xl font-bold text-blue-900 mb-4 flex items-center gap-2">
+          <span className="text-2xl">📂</span>
+          Danh mục sản phẩm
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Object.entries(CATEGORY_MENU).map(([key, menu]) => (
+            <button
+              key={key}
+              onClick={() => handleMainMenuClick(key as MainMenuKey)}
+              className={`px-5 py-4 rounded-xl text-base font-bold transition-all duration-300 flex flex-col items-center gap-2 ${
+                selectedMainMenu === key
+                  ? 'bg-gradient-to-br from-blue-600 via-blue-500 to-blue-600 text-white shadow-xl scale-105 border-2 border-blue-400'
+                  : 'bg-white text-blue-900 hover:bg-blue-50 hover:scale-102 shadow-md border-2 border-blue-200 hover:border-blue-400'
+              }`}
             >
-              {/* Product Image */}
-              <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
-                <img
-                  src={product.images[0]}
-                  alt={product.name}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <button className="p-2 bg-white hover:bg-blue-50 rounded-lg shadow-md transition-all duration-200">
-                    <Eye size={16} className="text-gray-700" />
+              <span className="text-3xl">{menu.icon}</span>
+              <span className="text-center text-sm leading-tight">{menu.title}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Categories & Subcategories - Compact Layout */}
+      {selectedMainMenu && selectedMenuData && (
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 overflow-hidden">
+          {/* Categories as horizontal tabs */}
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-4 border-b-2 border-blue-200">
+            <h3 className="text-base font-bold text-blue-900 mb-3 flex items-center gap-2">
+              <span className="text-lg">📑</span>
+              Chọn danh mục:
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {selectedMenuData.categories.map((category, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleCategoryClick(category.title)}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center gap-2 ${
+                    selectedCategory === category.title
+                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg border-2 border-blue-400'
+                      : 'bg-white text-blue-900 hover:bg-blue-100 shadow-md border-2 border-blue-200'
+                  }`}
+                >
+                  <span className="text-base">{category.icon}</span>
+                  <span>{category.title}</span>
+                  {selectedCategory === category.title && (
+                    <ChevronDown size={16} className="rotate-180" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Subcategories - Only show when category is selected */}
+          {selectedCategory && selectedCategoryData && (
+            <div className="p-4 bg-gradient-to-br from-white to-blue-50/20">
+              <h3 className="text-base font-bold text-blue-900 mb-3 flex items-center gap-2">
+                <span className="text-lg">🏷️</span>
+                {selectedCategoryData.title} - Chọn danh mục con:
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
+                {selectedCategoryData.subcategories.map((subcategory, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSubcategoryClick(subcategory)}
+                    className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-300 text-center ${
+                      selectedSubcategory === subcategory
+                        ? 'bg-gradient-to-br from-blue-700 via-blue-600 to-blue-700 text-white shadow-xl border-2 border-blue-500'
+                        : 'bg-white text-blue-800 hover:bg-blue-100 shadow-md border-2 border-blue-200 hover:border-blue-400'
+                    }`}
+                  >
+                    {subcategory}
                   </button>
-                  <button className="p-2 bg-white hover:bg-red-50 rounded-lg shadow-md transition-all duration-200">
-                    <Trash2 size={16} className="text-red-600" />
-                  </button>
-                </div>
+                ))}
               </div>
+            </div>
+          )}
+        </div>
+      )}
 
-              {/* Product Info */}
-              <div className="p-5">
-                <div className="mb-3">
-                  <h3 className="font-bold text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {product.name}
-                  </h3>
-                  <p className="text-xs text-gray-500 font-medium">{product.category.name}</p>
-                </div>
+      {/* Loading State */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center py-20 bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border-2 border-blue-200">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+          <p className="text-blue-600 font-bold text-lg">Đang tải sản phẩm...</p>
+        </div>
+      )}
 
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-1 text-yellow-400">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <span key={star} className="text-sm">★</span>
-                    ))}
-                    <span className="text-xs text-gray-500 ml-1">(131)</span>
+      {/* Error State */}
+      {error && (
+        <div className="bg-gradient-to-br from-red-50 to-red-100/50 border-2 border-red-300 rounded-2xl p-8 text-center shadow-lg">
+          <span className="text-6xl mb-4 block">⚠️</span>
+          <p className="text-red-700 font-bold text-lg">{error}</p>
+        </div>
+      )}
+
+      {/* Products Grid/List */}
+      {!loading && !error && viewMode === 'grid' ? (
+        <div className="bg-gradient-to-br from-blue-50/30 to-white rounded-2xl p-6 border-2 border-blue-100">
+          <h2 className="text-xl font-bold text-blue-900 mb-5 flex items-center gap-2 pb-3 border-b-2 border-blue-200">
+            <span className="text-2xl">📦</span>
+            Danh sách sản phẩm
+            <span className="ml-auto text-base text-blue-600">({filteredProducts.length} sản phẩm)</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {filteredProducts.map((product, index) => (
+              <div
+                key={product.id}
+                className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-blue-100 hover:border-blue-400 animate-slide-up"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                {/* Product Image */}
+                <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
+                  <img
+                    src={product.images[0] || 'https://via.placeholder.com/400'}
+                    alt={product.name}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  />
+                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <button className="p-2.5 bg-white hover:bg-blue-50 rounded-xl shadow-lg transition-all duration-200 border-2 border-blue-200">
+                      <Eye size={18} className="text-blue-600" />
+                    </button>
+                    <button className="p-2.5 bg-white hover:bg-red-50 rounded-xl shadow-lg transition-all duration-200 border-2 border-red-200">
+                      <Trash2 size={18} className="text-red-600" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  <span className="text-xl font-bold text-blue-600">${product.price}</span>
-                  <Link
-                    to={`/products/edit/${product.id}`}
-                    className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 hover:from-blue-50 hover:to-purple-50 text-gray-700 hover:text-blue-600 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2"
-                  >
-                    <Edit size={14} />
-                    Edit
-                  </Link>
+                {/* Product Info */}
+                <div className="p-5">
+                  <div className="mb-3">
+                    <h3 className="font-bold text-base text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                      {product.name}
+                    </h3>
+                    <p className="text-sm text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-lg inline-block">
+                      {product.categories.name}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4 mt-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
+                        Kho: {product.stock}
+                      </span>
+                    </div>
+                    <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-bold">
+                      {product.brand}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t-2 border-blue-100">
+                    <span className="text-xl font-bold text-blue-600">
+                      {parseInt(product.price).toLocaleString('vi-VN')}₫
+                    </span>
+                    <Link
+                      to={`/products/edit/${product.id}`}
+                      className="px-4 py-2 bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-500 hover:to-blue-600 text-blue-700 hover:text-white rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border-2 border-blue-200 hover:border-blue-500 hover:shadow-lg"
+                    >
+                      <Edit size={16} />
+                      Sửa
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      ) : (
-        <div className="bg-white rounded-2xl shadow-soft border border-gray-100 overflow-hidden">
+      ) : !loading && !error ? (
+        <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 overflow-hidden">
+          <div className="bg-gradient-to-br from-blue-50 via-blue-100 to-blue-50 p-4 border-b-2 border-blue-200">
+            <h2 className="text-xl font-bold text-blue-900 flex items-center gap-2">
+              <span className="text-2xl">📋</span>
+              Danh sách sản phẩm
+              <span className="ml-auto text-base text-blue-600">({filteredProducts.length} sản phẩm)</span>
+            </h2>
+          </div>
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100/50">
+            <thead className="bg-gradient-to-r from-blue-100 via-blue-50 to-blue-100 border-b-2 border-blue-200">
               <tr>
-                <th className="text-left py-4 px-6 text-xs font-bold text-gray-700 uppercase tracking-wider">Product</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-gray-700 uppercase tracking-wider">Category</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-gray-700 uppercase tracking-wider">Price</th>
-                <th className="text-left py-4 px-6 text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-blue-900 uppercase tracking-wider">Sản phẩm</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-blue-900 uppercase tracking-wider">Danh mục</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-blue-900 uppercase tracking-wider">Kho</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-blue-900 uppercase tracking-wider">Giá</th>
+                <th className="text-left py-4 px-6 text-sm font-bold text-blue-900 uppercase tracking-wider">Hành động</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y-2 divide-blue-100">
               {filteredProducts.map((product) => (
-                <tr key={product.id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/30 transition-all duration-200">
+                <tr key={product.id} className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-blue-100/30 transition-all duration-300">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
                       <img
-                        src={product.images[0]}
+                        src={product.images[0] || 'https://via.placeholder.com/64'}
                         alt={product.name}
-                        className="w-16 h-16 rounded-xl object-cover shadow-sm"
+                        className="w-20 h-20 rounded-xl object-cover shadow-md border-2 border-blue-200"
                       />
-                      <span className="font-semibold text-gray-900">{product.name}</span>
+                      <div className="max-w-xs">
+                        <p className="font-bold text-base text-gray-900 truncate">{product.name}</p>
+                        <p className="text-sm text-blue-600 font-semibold">{product.brand}</p>
+                      </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 text-gray-600">{product.category.name}</td>
                   <td className="py-4 px-6">
-                    <span className="text-lg font-bold text-blue-600">${product.price}</span>
+                    <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg">
+                      {product.categories.name}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${
+                      product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {product.stock}
+                    </span>
+                  </td>
+                  <td className="py-4 px-6">
+                    <span className="text-lg font-bold text-blue-600">
+                      {parseInt(product.price).toLocaleString('vi-VN')}₫
+                    </span>
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
-                      <button className="p-2 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Eye size={18} className="text-gray-600" />
+                      <button className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
+                        <Eye size={20} className="text-blue-600" />
                       </button>
-                      <Link to={`/products/edit/${product.id}`} className="p-2 hover:bg-blue-50 rounded-lg transition-colors">
-                        <Edit size={18} className="text-blue-600" />
+                      <Link to={`/products/edit/${product.id}`} className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
+                        <Edit size={20} className="text-blue-600" />
                       </Link>
-                      <button className="p-2 hover:bg-red-50 rounded-lg transition-colors">
-                        <Trash2 size={18} className="text-red-600" />
+                      <button className="p-2.5 hover:bg-red-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-red-300">
+                        <Trash2 size={20} className="text-red-600" />
                       </button>
                     </div>
                   </td>
@@ -217,7 +393,7 @@ const Products = () => {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
