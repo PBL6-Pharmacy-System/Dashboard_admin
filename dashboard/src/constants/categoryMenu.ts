@@ -12,7 +12,8 @@ export const CATEGORY_MENU = {
           'Vitamin tổng hợp',
           'Dầu cá, Omega 3, DHA',
           'Vitamin C các loại',
-          'Bổ sung Sắt & Axit Folic'
+          'Bổ sung Sắt & Axit Folic',
+          'Bổ mắt, bảo vệ mắt'
         ]
       },
       {
@@ -21,7 +22,8 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Sinh lý nam',
           'Sinh lý nữ',
-          'Hỗ trợ mãn kinh'
+          'Hỗ trợ mãn kinh',
+          'Cân bằng nội tiết tố'
         ]
       },
       {
@@ -47,7 +49,11 @@ export const CATEGORY_MENU = {
         icon: '🌸',
         subcategories: [
           'Táo bón',
-          'Khó tiêu'
+          'Khó tiêu',
+          'Vi sinh - Probiotic',
+          'Dạ dày, tá tràng',
+          'Đại tràng',
+          'Chức năng gan'
         ]
       },
       {
@@ -65,7 +71,9 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Chăm sóc chuyên sâu cho tóc',
           'Chăm sóc da mặt',
-          'Chăm sóc da nứt nẻ'
+          'Chăm sóc da nứt nẻ',
+          'Chống lão hóa',
+          'Tóc'
         ]
       },
       {
@@ -83,7 +91,9 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Sữa',
           'Nước Yến',
-          'Thực phẩm - Đồ uống'
+          'Thực phẩm - Đồ uống',
+          'Đường ăn kiêng',
+          'Tăng sức đề kháng, miễn dịch'
         ]
       }
     ]
@@ -100,7 +110,11 @@ export const CATEGORY_MENU = {
           'Kem chống nắng da mặt',
           'Dưỡng da mặt',
           'Mặt nạ',
-          'Serum, Essence hoặc Ampoule'
+          'Serum, Essence hoặc Ampoule',
+          'Nước tẩy trang, dầu tẩy trang',
+          'Dưỡng da mắt',
+          'Hỗ trợ cải thiện quầng thâm, bọng mắt',
+          'Hỗ trợ cải thiện nếp nhăn vùng mắt'
         ]
       },
       {
@@ -109,7 +123,11 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Sữa tắm, xà bông',
           'Kem dưỡng thể',
-          'Tẩy tế bào chết'
+          'Sữa dưỡng thể, kem dưỡng thể',
+          'Tẩy tế bào chết',
+          'Chống nắng toàn thân',
+          'Lăn khử mùi, xịt khử mùi',
+          'Kem dưỡng da tay, chân'
         ]
       },
       {
@@ -117,8 +135,14 @@ export const CATEGORY_MENU = {
         icon: '🧼',
         subcategories: [
           'Trị mụn',
+          'Kem hỗ trợ giảm mụn, gel hỗ trợ giảm mụn',
           'Trị thâm nám',
-          'Da nhạy cảm'
+          'Kem hỗ trợ mờ nám, tàn nhang, đốm nâu',
+          'Da nhạy cảm',
+          'Da mẫn cảm, dễ kích ứng',
+          'Dưỡng da bị khô, thiếu ẩm',
+          'Hỗ trợ mờ sẹo, mờ vết thâm',
+          'Da'
         ]
       },
       {
@@ -127,7 +151,10 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Dầu gội',
           'Dầu xả',
-          'Mặt nạ tóc'
+          'Dầu gội dầu xả',
+          'Mặt nạ tóc',
+          'Dưỡng tóc, ủ tóc',
+          'Dầu gội giúp giảm nấm và ngứa da đầu'
         ]
       },
       {
@@ -150,10 +177,22 @@ export const CATEGORY_MENU = {
         icon: '💊',
         subcategories: [
           'Kháng sinh',
+          'Thuốc kháng sinh, kháng nấm',
+          'Thuốc kháng nấm',
+          'Thuốc kháng virus',
           'Điều trị ung thư',
           'Tim mạch máu',
           'Thần kinh',
-          'Tiêu hóa gan mật'
+          'Thuốc thần kinh',
+          'Tiêu hóa gan mật',
+          'Thuốc dạ dày',
+          'Thuốc tiêu hoá',
+          'Thuốc trị bệnh gan',
+          'Thuốc trị tiêu chảy',
+          'Thuốc trị táo bón',
+          'Thuốc trị giun sán',
+          'Thuốc trị trĩ, suy giãn tĩnh mạch',
+          'Thuốc tăng cường tuần hoàn não'
         ]
       },
       {
@@ -186,7 +225,13 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Xà phòng',
           'Dung dịch vệ sinh',
-          'Khử mùi'
+          'Dung dịch vệ sinh phụ nữ',
+          'Khử mùi',
+          'Băng vệ sinh',
+          'Bao cao su',
+          'Khăn giấy, khăn ướt',
+          'Nước rửa tay',
+          'Gel bôi trơn'
         ]
       },
       {
@@ -195,7 +240,10 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Kem đánh răng',
           'Bàn chải đánh răng',
-          'Nước súc miệng'
+          'Bàn chải điện',
+          'Nước súc miệng',
+          'Chỉ nha khoa',
+          'Chăm sóc răng'
         ]
       },
       {
@@ -203,8 +251,32 @@ export const CATEGORY_MENU = {
         icon: '🧴',
         subcategories: [
           'Trà sức khỏe',
+          'Trà thảo dược',
           'Mật ong',
-          'Nước uống bổ sung'
+          'Nước uống bổ sung',
+          'Nước uống không gas',
+          'Kẹo cứng'
+        ]
+      },
+      {
+        title: 'Chăm sóc đặc biệt',
+        icon: '👶',
+        subcategories: [
+          'Đồ dùng cho bé',
+          'Đồ dùng cho mẹ',
+          'Sức khoẻ tình dục'
+        ]
+      },
+      {
+        title: 'Sức khỏe khác',
+        icon: '🩺',
+        subcategories: [
+          'Suy giãn tĩnh mạch',
+          'Vớ ngăn tĩnh mạch',
+          'Hoạt huyết',
+          'Hỗ trợ trao đổi chất',
+          'Giải rượu, cai rượu',
+          'Thử thai'
         ]
       }
     ]
@@ -218,9 +290,15 @@ export const CATEGORY_MENU = {
         icon: '🔧',
         subcategories: [
           'Vệ sinh mũi',
+          'Dụng cụ vệ sinh mũi',
           'Kim các loại',
           'Máy massage',
-          'Túi chườm'
+          'Túi chườm',
+          'Dụng cụ y tế',
+          'Dụng cụ cạo râu',
+          'Dụng cụ tẩy lông',
+          'Vệ sinh tai',
+          'Các dụng cụ và sản phẩm khác'
         ]
       },
       {
@@ -229,7 +307,33 @@ export const CATEGORY_MENU = {
         subcategories: [
           'Nhiệt kế',
           'Máy đo huyết áp',
-          'Máy đo đường huyết'
+          'Máy đo đường huyết',
+          'Máy, que thử đường huyết',
+          'Máy đo SpO2'
+        ]
+      },
+      {
+        title: 'Chăm sóc & Bảo vệ',
+        icon: '🏥',
+        subcategories: [
+          'Băng y tế',
+          'Bông y tế',
+          'Chăm sóc vết thương',
+          'Miếng dán giảm đau, hạ sốt',
+          'Xịt giảm đau, kháng viêm',
+          'Cồn, nước sát trùng, nước muối',
+          'Chống muỗi & côn trùng',
+          'Kit Test Covid'
+        ]
+      },
+      {
+        title: 'Tinh dầu',
+        icon: '🌿',
+        subcategories: [
+          'Tinh dầu',
+          'Tinh dầu massage',
+          'Tinh dầu xông',
+          'Tinh dầu trị cảm'
         ]
       },
       {

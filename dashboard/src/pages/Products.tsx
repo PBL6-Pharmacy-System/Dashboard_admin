@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Search, Plus, Grid, List, Edit, Trash2, Eye, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { productService, type Product } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { CATEGORY_MENU, type MainMenuKey } from '../constants/categoryMenu';
 
 const Products = () => {
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [products, setProducts] = useState<Product[]>([]);
@@ -15,13 +16,23 @@ const Products = () => {
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Trigger refresh when navigating back with reload state
+  useEffect(() => {
+    if (location.state?.reload) {
+      setRefreshKey(prev => prev + 1);
+      // Clear the state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   // Fetch all products initially
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await productService.getAllProducts();
+        const response = await productService.getAllProducts(1, 1000); // Get up to 1000 products
         setAllProducts(response.products);
         setProducts(response.products);
         setError(null);
@@ -34,7 +45,7 @@ const Products = () => {
     };
 
     fetchProducts();
-  }, []);
+  }, [refreshKey]);
 
   // Fetch products when subcategory changes
   useEffect(() => {
@@ -254,17 +265,17 @@ const Products = () => {
 
       {/* Products Grid/List */}
       {!loading && !error && viewMode === 'grid' ? (
-        <div className="bg-gradient-to-br from-blue-50/30 to-white rounded-2xl p-6 border-2 border-blue-100">
-          <h2 className="text-xl font-bold text-blue-900 mb-5 flex items-center gap-2 pb-3 border-b-2 border-blue-200">
-            <span className="text-2xl">📦</span>
+        <div className="bg-gradient-to-br from-blue-50/30 to-white rounded-2xl p-4 border-2 border-blue-100">
+          <h2 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2 pb-2 border-b-2 border-blue-200">
+            <span className="text-xl">📦</span>
             Danh sách sản phẩm
-            <span className="ml-auto text-base text-blue-600">({filteredProducts.length} sản phẩm)</span>
+            <span className="ml-auto text-sm text-blue-600">({filteredProducts.length} sản phẩm)</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3">
             {filteredProducts.map((product, index) => (
               <div
                 key={product.id}
-                className="group bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-blue-100 hover:border-blue-400 animate-slide-up"
+                className="group bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-blue-100 hover:border-blue-400 animate-slide-up"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 {/* Product Image */}
@@ -274,47 +285,48 @@ const Products = () => {
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
-                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <button className="p-2.5 bg-white hover:bg-blue-50 rounded-xl shadow-lg transition-all duration-200 border-2 border-blue-200">
-                      <Eye size={18} className="text-blue-600" />
-                    </button>
-                    <button className="p-2.5 bg-white hover:bg-red-50 rounded-xl shadow-lg transition-all duration-200 border-2 border-red-200">
-                      <Trash2 size={18} className="text-red-600" />
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <Link
+                      to={`/products/detail/${product.id}`}
+                      className="p-1.5 bg-white hover:bg-blue-50 rounded-lg shadow-md transition-all duration-200"
+                    >
+                      <Eye size={14} className="text-blue-600" />
+                    </Link>
+                    <button className="p-1.5 bg-white hover:bg-red-50 rounded-lg shadow-md transition-all duration-200">
+                      <Trash2 size={14} className="text-red-600" />
                     </button>
                   </div>
                 </div>
 
                 {/* Product Info */}
-                <div className="p-5">
-                  <div className="mb-3">
-                    <h3 className="font-bold text-base text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
+                <div className="p-3">
+                  <div className="mb-2">
+                    <h3 className="font-semibold text-sm text-gray-900 mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors leading-tight">
                       {product.name}
                     </h3>
-                    <p className="text-sm text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-lg inline-block">
-                      {product.categories.name}
+                    <p className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded inline-block">
+                      {product.categories?.name || 'Chưa phân loại'}
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between mb-4 mt-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
-                        Kho: {product.stock}
-                      </span>
-                    </div>
-                    <span className="text-sm px-3 py-1 bg-blue-100 text-blue-700 rounded-lg font-bold">
-                      {product.brand}
+                  <div className="flex items-center justify-between mb-2 text-xs">
+                    <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
+                      Kho: {product.stock}
+                    </span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-semibold">
+                      {product.brand || 'N/A'}
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between pt-4 border-t-2 border-blue-100">
-                    <span className="text-xl font-bold text-blue-600">
+                  <div className="flex items-center justify-between pt-2 border-t border-blue-100">
+                    <span className="text-base font-bold text-blue-600">
                       {parseInt(product.price).toLocaleString('vi-VN')}₫
                     </span>
                     <Link
                       to={`/products/edit/${product.id}`}
-                      className="px-4 py-2 bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-500 hover:to-blue-600 text-blue-700 hover:text-white rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 border-2 border-blue-200 hover:border-blue-500 hover:shadow-lg"
+                      className="px-2 py-1 bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-500 hover:to-blue-600 text-blue-700 hover:text-white rounded-lg text-xs font-semibold transition-all duration-300 flex items-center gap-1 border border-blue-200 hover:border-blue-500"
                     >
-                      <Edit size={16} />
+                      <Edit size={12} />
                       Sửa
                     </Link>
                   </div>
@@ -354,13 +366,13 @@ const Products = () => {
                       />
                       <div className="max-w-xs">
                         <p className="font-bold text-base text-gray-900 truncate">{product.name}</p>
-                        <p className="text-sm text-blue-600 font-semibold">{product.brand}</p>
+                        <p className="text-sm text-blue-600 font-semibold">{product.brand || 'N/A'}</p>
                       </div>
                     </div>
                   </td>
                   <td className="py-4 px-6">
                     <span className="text-sm font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg">
-                      {product.categories.name}
+                      {product.categories?.name || 'Chưa phân loại'}
                     </span>
                   </td>
                   <td className="py-4 px-6">
@@ -377,9 +389,12 @@ const Products = () => {
                   </td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
-                      <button className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
+                      <Link
+                        to={`/products/detail/${product.id}`}
+                        className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300"
+                      >
                         <Eye size={20} className="text-blue-600" />
-                      </button>
+                      </Link>
                       <Link to={`/products/edit/${product.id}`} className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
                         <Edit size={20} className="text-blue-600" />
                       </Link>

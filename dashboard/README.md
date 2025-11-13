@@ -1,75 +1,239 @@
-# React + TypeScript + Vite
+# 🏥 Pharmacy Admin Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Admin Dashboard cho hệ thống quản lý nhà thuốc. Built with React + TypeScript + Vite.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 📦 Product Management
+- ✅ View all products with grid/list view
+- ✅ Filter products by categories/subcategories
+- ✅ Search products by name
+- ✅ **Add new products** (Full implementation)
+- ⏳ Edit products (TODO)
+- ⏳ Delete products (TODO)
 
-## React Compiler
+### 🎯 Add Product Features
+- ✅ 7-section form with full product information
+- ✅ Image upload & preview
+- ✅ Dynamic FAQ management
+- ✅ Dynamic Product Units
+- ✅ API integration with loading/success/error states
+- ✅ Toast notifications
+- ✅ Form validation
+- ✅ Auto redirect after success
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+### 📊 Dashboard (Existing)
+- Sales statistics
+- Recent orders
+- Top products
+- Revenue charts
 
-Note: This will impact Vite dev & build performances.
+## 🚀 Quick Start
 
-## Expanding the ESLint configuration
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Backend API running on `http://localhost:3000/api`
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Installation
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+```bash
+# Clone repository
+git clone <repo-url>
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Navigate to dashboard
+cd admin_dashboard/dashboard
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Install dependencies
+npm install
+
+# Setup environment variables
+cp .env.example .env
+# Edit .env and set VITE_API_BASE_URL
+
+# Start dev server
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Access Application
+- **Dev URL**: `http://localhost:5173`
+- **Products**: `http://localhost:5173/products`
+- **Add Product**: `http://localhost:5173/products/add`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📚 Documentation
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- **[QUICK_START.md](./QUICK_START.md)** - Quick guide để bắt đầu
+- **[ADD_PRODUCT_GUIDE.md](./ADD_PRODUCT_GUIDE.md)** - Hướng dẫn chi tiết chức năng thêm sản phẩm
+- **[TEST_ADD_PRODUCT.md](./TEST_ADD_PRODUCT.md)** - Test cases và debug guide
+- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Tóm tắt implementation
+
+## 🛠️ Tech Stack
+
+- **React 19** - UI Framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS 4** - Styling
+- **React Router DOM** - Routing
+- **Recharts** - Charts
+- **Lucide React** - Icons
+
+## 📁 Project Structure
+
 ```
+dashboard/
+├── src/
+│   ├── pages/
+│   │   ├── Dashboard.tsx
+│   │   ├── Products.tsx
+│   │   ├── AddProduct.tsx      ← Main add product page
+│   │   ├── OrderList.tsx
+│   │   └── ...
+│   ├── components/
+│   │   ├── common/
+│   │   │   └── Toast.tsx        ← Toast notification
+│   │   ├── layout/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── Layout.tsx
+│   │   └── dashboard/
+│   ├── services/
+│   │   ├── api.ts               ← Base API service
+│   │   ├── productService.ts    ← Product API calls
+│   │   └── categoryService.ts
+│   ├── constants/
+│   │   ├── categoryMenu.ts
+│   │   └── menuData.ts
+│   └── types/
+├── public/
+├── .env                          ← Environment config
+└── package.json
+```
+
+## 🔧 Environment Variables
+
+Create `.env` file:
+
+```bash
+# API Base URL
+VITE_API_BASE_URL=http://localhost:3000/api
+
+# Other configs (if needed)
+# VITE_API_TIMEOUT=30000
+# VITE_UPLOAD_MAX_SIZE=10485760
+```
+
+## 📝 API Endpoints
+
+### Products
+- `GET /products` - Get all products
+- `GET /products/:id` - Get product by ID
+- `POST /products` - Create new product ✅
+- `PUT /products/:id` - Update product
+- `DELETE /products/:id` - Delete product
+
+### Categories
+- `GET /categories` - Get all categories
+- `GET /categories/:id/products` - Get products by category
+
+See [API Documentation](./API.md) for details.
+
+## 🧪 Testing
+
+### Run dev server
+```bash
+npm run dev
+```
+
+### Test Add Product
+1. Navigate to `/products/add`
+2. Fill in required fields (name, description, price)
+3. Click "Add Product"
+4. Check Console logs for debug info
+5. Check Network tab for API calls
+
+### Debug
+- Open DevTools (F12)
+- Console: View logs
+- Network: Check API calls
+- React DevTools: Inspect component state
+
+## 🐛 Troubleshooting
+
+### "Không thể thêm sản phẩm"
+- ✅ Check backend is running
+- ✅ Check `VITE_API_BASE_URL` in `.env`
+- ✅ Check CORS policy in backend
+
+### CORS Error
+Add to backend:
+```javascript
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
+```
+
+### Build Error
+```bash
+# Clear cache
+rm -rf node_modules
+rm package-lock.json
+npm install
+```
+
+## 🚧 TODO / Future Features
+
+### Products
+- [ ] Edit product functionality
+- [ ] Delete product with confirmation
+- [ ] Bulk operations (delete, export)
+- [ ] Product image upload to server
+- [ ] Category/Supplier dropdown with search
+- [ ] Rich text editor for description
+- [ ] Drag & drop image upload
+- [ ] Form auto-save to localStorage
+- [ ] Product templates
+- [ ] Import from Excel/CSV
+
+### General
+- [ ] Authentication & Authorization
+- [ ] Role-based access control
+- [ ] Activity logs
+- [ ] Notifications system
+- [ ] Dark mode
+- [ ] Multi-language support
+- [ ] Mobile responsive improvements
+
+## 📦 Scripts
+
+```bash
+# Development
+npm run dev          # Start dev server
+
+# Build
+npm run build        # Build for production
+npm run preview      # Preview production build
+
+# Linting
+npm run lint         # Run ESLint
+```
+
+## 🤝 Contributing
+
+1. Create feature branch
+2. Make changes
+3. Test thoroughly
+4. Submit pull request
+
+## 📄 License
+
+This project is licensed under MIT License.
+
+## 👥 Team
+
+PBL6 - Pharmacy Management System
+
+---
+
+**Last Updated**: November 11, 2025
+**Version**: 1.0.0

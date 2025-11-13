@@ -1,4 +1,4 @@
-import { Search, Bell, ChevronDown, Menu } from 'lucide-react';
+import {Bell, ChevronDown, Menu } from 'lucide-react';
 
 const Header = () => {
   return (
@@ -10,7 +10,7 @@ const Header = () => {
             <Menu size={20} className="text-gray-600 group-hover:text-blue-600" />
           </button>
 
-          <div className="flex-1 max-w-lg">
+          {/* <div className="flex-1 max-w-lg">
             <div className="relative group">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-blue-500 transition-colors z-10" size={18} />
               <input
@@ -20,7 +20,7 @@ const Header = () => {
               />
               <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 to-purple-500/0 group-hover:from-blue-500/5 group-hover:to-purple-500/5 transition-all pointer-events-none"></div>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Right Section */}
