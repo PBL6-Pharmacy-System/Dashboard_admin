@@ -16,27 +16,37 @@ import {
   Settings,
   LogOut
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { authService } from '../../services/authService';
 
 const Sidebar = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+      await authService.logout();
+      navigate('/login');
+    }
+  };
+
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Package, label: 'Products', path: '/products' },
-    { icon: Heart, label: 'Favorites', path: '/favorites' },
-    { icon: Inbox, label: 'Inbox', path: '/inbox' },
-    { icon: List, label: 'Order Lists', path: '/orders' },
-    { icon: Archive, label: 'Product Stock', path: '/stock' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+    { icon: Package, label: 'Products', path: '/dashboard/products' },
+    { icon: Heart, label: 'Favorites', path: '/dashboard/favorites' },
+    { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox' },
+    { icon: List, label: 'Order Lists', path: '/dashboard/orders' },
+    { icon: Archive, label: 'Product Stock', path: '/dashboard/stock' },
   ];
 
   const pageItems = [
-    { icon: DollarSign, label: 'Pricing', path: '/pricing' },
-    { icon: Calendar, label: 'Calendar', path: '/calendar' },
-    { icon: CheckSquare, label: 'To-Do', path: '/todo' },
-    { icon: Users, label: 'Contact', path: '/contact' },
-    { icon: FileText, label: 'Invoice', path: '/invoice' },
-    { icon: BarChart3, label: 'UI Elements', path: '/ui-elements' },
-    { icon: UserCircle, label: 'Team', path: '/team' },
-    { icon: Table, label: 'Table', path: '/table' },
+    { icon: DollarSign, label: 'Pricing', path: '/dashboard/pricing' },
+    { icon: Calendar, label: 'Calendar', path: '/dashboard/calendar' },
+    { icon: CheckSquare, label: 'To-Do', path: '/dashboard/todo' },
+    { icon: Users, label: 'Contact', path: '/dashboard/contact' },
+    { icon: FileText, label: 'Invoice', path: '/dashboard/invoice' },
+    { icon: BarChart3, label: 'UI Elements', path: '/dashboard/ui-elements' },
+    { icon: UserCircle, label: 'Team', path: '/dashboard/team' },
+    { icon: Table, label: 'Table', path: '/dashboard/table' },
   ];
 
   return (
@@ -56,6 +66,7 @@ const Sidebar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              end
               className={({ isActive }) =>
                 `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden ${
                   isActive
@@ -89,6 +100,7 @@ const Sidebar = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end
                 className={({ isActive }) =>
                   `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden ${
                     isActive
@@ -118,7 +130,10 @@ const Sidebar = () => {
           <Settings size={20} className="group-hover:rotate-90 transition-transform duration-300" />
           <span className="text-sm font-semibold">Settings</span>
         </button>
-        <button className="group flex items-center gap-3 px-4 py-3 w-full text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200 hover:shadow-sm">
+        <button 
+          onClick={handleLogout}
+          className="group flex items-center gap-3 px-4 py-3 w-full text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200 hover:shadow-sm"
+        >
           <LogOut size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
           <span className="text-sm font-semibold">Logout</span>
         </button>

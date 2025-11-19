@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { productService, type Product } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { CATEGORY_MENU, type MainMenuKey } from '../constants/categoryMenu';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const Products = () => {
   const location = useLocation();
@@ -17,6 +18,9 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Trigger refresh when navigating back with reload state
   useEffect(() => {
@@ -93,6 +97,33 @@ const Products = () => {
     setSelectedSubcategory(subcategoryName);
   };
 
+  // Handle delete product
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!productToDelete) return;
+
+    try {
+      setDeleting(true);
+      await productService.deleteProduct(productToDelete.id);
+      
+      // Remove product from state
+      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      setAllProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Không thể xóa sản phẩm';
+      alert(errorMessage);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   // Filter products by search
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -115,7 +146,7 @@ const Products = () => {
           </p>
         </div>
         <Link
-          to="/products/add"
+          to="/dashboard/products/add"
           className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl font-semibold transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50"
         >
           <Plus size={20} />
@@ -287,12 +318,18 @@ const Products = () => {
                   />
                   <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <Link
-                      to={`/products/detail/${product.id}`}
+                      to={`/dashboard/products/detail/${product.id}`}
                       className="p-1.5 bg-white hover:bg-blue-50 rounded-lg shadow-md transition-all duration-200"
                     >
                       <Eye size={14} className="text-blue-600" />
                     </Link>
-                    <button className="p-1.5 bg-white hover:bg-red-50 rounded-lg shadow-md transition-all duration-200">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteClick(product);
+                      }}
+                      className="p-1.5 bg-white hover:bg-red-50 rounded-lg shadow-md transition-all duration-200"
+                    >
                       <Trash2 size={14} className="text-red-600" />
                     </button>
                   </div>
@@ -323,7 +360,7 @@ const Products = () => {
                       {parseInt(product.price).toLocaleString('vi-VN')}₫
                     </span>
                     <Link
-                      to={`/products/edit/${product.id}`}
+                      to={`/dashboard/products/edit/${product.id}`}
                       className="px-2 py-1 bg-gradient-to-r from-blue-100 to-blue-50 hover:from-blue-500 hover:to-blue-600 text-blue-700 hover:text-white rounded-lg text-xs font-semibold transition-all duration-300 flex items-center gap-1 border border-blue-200 hover:border-blue-500"
                     >
                       <Edit size={12} />
@@ -390,15 +427,18 @@ const Products = () => {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
                       <Link
-                        to={`/products/detail/${product.id}`}
+                        to={`/dashboard/products/detail/${product.id}`}
                         className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300"
                       >
                         <Eye size={20} className="text-blue-600" />
                       </Link>
-                      <Link to={`/products/edit/${product.id}`} className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
+                      <Link to={`/dashboard/products/edit/${product.id}`} className="p-2.5 hover:bg-blue-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-blue-300">
                         <Edit size={20} className="text-blue-600" />
                       </Link>
-                      <button className="p-2.5 hover:bg-red-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-red-300">
+                      <button 
+                        onClick={() => handleDeleteClick(product)}
+                        className="p-2.5 hover:bg-red-50 rounded-xl transition-all duration-200 border-2 border-transparent hover:border-red-300"
+                      >
                         <Trash2 size={20} className="text-red-600" />
                       </button>
                     </div>
@@ -409,6 +449,22 @@ const Products = () => {
           </table>
         </div>
       ) : null}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setProductToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        title="Xác nhận xóa sản phẩm"
+        message={`Bạn có chắc chắn muốn xóa sản phẩm "${productToDelete?.name}"? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa sản phẩm"
+        cancelText="Hủy"
+        type="danger"
+        loading={deleting}
+      />
     </div>
   );
 };

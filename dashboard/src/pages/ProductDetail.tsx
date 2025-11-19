@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { productService } from '../services/productService';
 import type { Product } from '../services/productService';
+import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,8 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -49,17 +52,21 @@ const ProductDetail = () => {
   };
 
   const handleDelete = async () => {
-    if (!product || !window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
-      return;
-    }
+    if (!product) return;
 
     try {
+      setDeleting(true);
       await productService.deleteProduct(product.id);
-      alert('Xóa sản phẩm thành công!');
-      navigate('/products');
+      setShowDeleteDialog(false);
+      
+      // Show success message briefly before navigating
+      setTimeout(() => {
+        navigate('/products', { state: { reload: true } });
+      }, 500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể xóa sản phẩm';
       alert(errorMessage);
+      setDeleting(false);
     }
   };
 
@@ -121,14 +128,14 @@ const ProductDetail = () => {
           </div>
           <div className="flex gap-3">
             <Link
-              to={`/products/edit/${product.id}`}
+              to={`/dashboard/products/edit/${product.id}`}
               className="px-5 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
             >
               <Edit size={18} />
               Chỉnh sửa
             </Link>
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               className="px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
             >
               <Trash2 size={18} />
@@ -351,6 +358,19 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Xác nhận xóa sản phẩm"
+        message={`Bạn có chắc chắn muốn xóa sản phẩm "${product?.name}"? Hành động này không thể hoàn tác.`}
+        confirmText="Xóa sản phẩm"
+        cancelText="Hủy"
+        type="danger"
+        loading={deleting}
+      />
     </div>
   );
 };

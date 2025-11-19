@@ -1,105 +1,126 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Lock, User as UserIcon, Eye, EyeOff, LogIn } from 'lucide-react';
+import { authService } from '../services/authService';
 
-const Login: React.FC = () => {
+const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberPassword: false,
+    username: '',
+    password: ''
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log('Login data:', formData);
-    // For now, just navigate to dashboard
-    navigate('/');
+    setError(null);
+    setLoading(true);
+
+    try {
+      const result = await authService.login(formData.username, formData.password);
+      
+      if (result.success && result.data) {
+        localStorage.setItem('accessToken', result.data.token);
+        localStorage.setItem('refreshToken', result.data.refreshToken);
+        localStorage.setItem('user', JSON.stringify(result.data.user));
+        navigate('/dashboard');
+      } else {
+        setError(result.error || 'Đăng nhập thất bại');
+      }
+    } catch (err) {
+      setError('Không thể kết nối đến server');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 p-4">
+      <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Login to Account</h1>
-          <p className="text-gray-500 text-sm">Please enter your email and password to continue</p>
+          <div className="inline-block p-4 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl shadow-2xl mb-4">
+            <Lock className="text-white" size={48} />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            Admin Dashboard
+          </h1>
+          <p className="text-gray-600 font-medium">Đăng nhập để quản lý hệ thống</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email address:
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="esteban_schiller@gmail.com"
-              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              required
-            />
-          </div>
+        <div className="bg-white rounded-3xl shadow-2xl p-8 border-2 border-blue-100">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
+                <p className="text-red-700 text-sm font-semibold text-center">⚠️ {error}</p>
+              </div>
+            )}
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <Link to="/forgot-password" className="text-sm text-gray-400 hover:text-blue-500 transition-colors">
-                Forget Password?
-              </Link>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Tên đăng nhập</label>
+              <div className="relative">
+                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400" size={20} />
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none font-medium"
+                  placeholder="Nhập tên đăng nhập"
+                  required
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="••••••"
-              className="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-              required
-            />
+
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">Mật khẩu</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-400" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-12 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none font-medium"
+                  placeholder="Nhập mật khẩu"
+                  required
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600 transition-colors"
+                  disabled={loading}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <span>Đang đăng nhập...</span>
+                </>
+              ) : (
+                <>
+                  <LogIn size={20} />
+                  <span>Đăng nhập</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">© 2024 Pharmacy Management System</p>
           </div>
-
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="rememberPassword"
-              name="rememberPassword"
-              checked={formData.rememberPassword}
-              onChange={handleChange}
-              className="w-4 h-4 text-blue-500 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="rememberPassword" className="ml-2 text-sm text-gray-600">
-              Remember Password
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            Sign In
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-blue-500 font-semibold hover:text-blue-600 transition-colors">
-              Create Account
-            </Link>
-          </p>
         </div>
       </div>
     </div>
