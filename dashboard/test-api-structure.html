@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Dashboard API Structure</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .api-test {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+        .api-test h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        .success {
+            border-left-color: #4CAF50;
+        }
+        .success h3 {
+            color: #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .error h3 {
+            color: #f44336;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .loading {
+            color: #FF9800;
+            font-weight: bold;
+        }
+        .token-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test Dashboard API Structure</h1>
+        <p>Tool này sẽ kiểm tra cấu trúc dữ liệu từ tất cả các Dashboard API endpoints</p>
+        
+        <div>
+            <label><strong>Access Token (từ localStorage):</strong></label>
+            <input type="text" id="tokenInput" class="token-input" placeholder="Nhập access token hoặc click 'Get Token from LocalStorage'">
+            <button onclick="getTokenFromStorage()">📋 Get Token from LocalStorage</button>
+            <button onclick="testAllAPIs()">🚀 Test All APIs</button>
+            <button onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        const DATE_RANGE = {
+            startDate: '2025-11-01',
+            endDate: '2025-11-26'
+        };
+
+        function getTokenFromStorage() {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                document.getElementById('tokenInput').value = token;
+                alert('✅ Token found and loaded!');
+            } else {
+                alert('❌ No token found in localStorage. Please login first.');
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testAPI(name, endpoint, hasDateRange = true) {
+            const resultsDiv = document.getElementById('results');
+            const testDiv = document.createElement('div');
+            testDiv.className = 'api-test';
+            testDiv.innerHTML = `<h3>🔄 Testing: ${name}</h3><p class="loading">Loading...</p>`;
+            resultsDiv.appendChild(testDiv);
+
+            const token = document.getElementById('tokenInput').value.trim();
+            if (!token) {
+                testDiv.innerHTML = `<h3>❌ ${name}</h3><p>Error: No access token provided</p>`;
+                testDiv.className = 'api-test error';
+                return;
+            }
+
+            try {
+                let url = `${API_BASE}${endpoint}`;
+                if (hasDateRange) {
+                    url += `?startDate=${DATE_RANGE.startDate}&endDate=${DATE_RANGE.endDate}`;
+                }
+
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    testDiv.className = 'api-test success';
+                    testDiv.innerHTML = `
+                        <h3>✅ ${name}</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Endpoint:</strong> ${endpoint}</p>
+                        <p><strong>Response Structure:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                        <p><strong>Data Type Analysis:</strong></p>
+                        <pre>${analyzeStructure(data)}</pre>
+                    `;
+                } else {
+                    testDiv.className = 'api-test error';
+                    testDiv.innerHTML = `
+                        <h3>❌ ${name}</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>Error:</strong></p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                testDiv.className = 'api-test error';
+                testDiv.innerHTML = `
+                    <h3>❌ ${name}</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+            }
+        }
+
+        function analyzeStructure(obj, prefix = '') {
+            let result = '';
+            if (Array.isArray(obj)) {
+                result += `${prefix}Type: Array (length: ${obj.length})\n`;
+                if (obj.length > 0) {
+                    result += `${prefix}First Item:\n${analyzeStructure(obj[0], prefix + '  ')}`;
+                }
+            } else if (obj && typeof obj === 'object') {
+                result += `${prefix}Type: Object\n`;
+                for (const [key, value] of Object.entries(obj)) {
+                    const type = Array.isArray(value) ? 'Array' : typeof value;
+                    result += `${prefix}  ${key}: ${type}`;
+                    if (Array.isArray(value)) {
+                        result += ` (length: ${value.length})`;
+                    }
+                    result += '\n';
+                    
+                    // Show nested structure for objects and arrays
+                    if (typeof value === 'object' && value !== null) {
+                        result += analyzeStructure(value, prefix + '    ');
+                    }
+                }
+            } else {
+                result += `${prefix}Type: ${typeof obj}, Value: ${obj}\n`;
+            }
+            return result;
+        }
+
+        async function testAllAPIs() {
+            clearResults();
+            
+            const apis = [
+                { name: 'Revenue API', endpoint: '/admin/dashboard/revenue', hasDateRange: true },
+                { name: 'Top Products API', endpoint: '/admin/dashboard/top-products', hasDateRange: true },
+                { name: 'Orders Stats API', endpoint: '/admin/dashboard/orders-stats', hasDateRange: true },
+                { name: 'Overview API', endpoint: '/admin/dashboard/overview', hasDateRange: true },
+                { name: 'Inventory Stats API', endpoint: '/admin/dashboard/inventory-stats', hasDateRange: false },
+                { name: 'Branch Sales API', endpoint: '/admin/dashboard/branch-sales', hasDateRange: true },
+                { name: 'Promotions Stats API', endpoint: '/admin/dashboard/promotions-stats', hasDateRange: true },
+                { name: 'Reviews Stats API', endpoint: '/admin/dashboard/reviews-stats', hasDateRange: true },
+                { name: 'Recent Activities API', endpoint: '/admin/dashboard/recent-activities', hasDateRange: false }
+            ];
+
+            for (const api of apis) {
+                await testAPI(api.name, api.endpoint, api.hasDateRange);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Delay 500ms between requests
+            }
+        }
+
+        // Auto-load token on page load
+        window.addEventListener('load', () => {
+            getTokenFromStorage();
+        });
+    </script>
+</body>
+</html>

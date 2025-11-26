@@ -159,7 +159,7 @@ const AddProduct = () => {
       setSuccess(true);
 
       setTimeout(() => {
-        navigate('/products', { replace: true, state: { reload: true } });
+        navigate('/dashboard/products', { replace: true, state: { reload: true } });
       }, 1500);
       
     } catch (err: unknown) {
@@ -204,7 +204,7 @@ const AddProduct = () => {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link
-          to="/products"
+          to="/dashboard/products"
           className="p-2 hover:bg-white rounded-xl transition-all duration-200 border border-gray-200"
         >
           <ArrowLeft size={20} className="text-gray-700" />
@@ -547,7 +547,7 @@ const AddProduct = () => {
         {/* Submit Buttons */}
         <div className="flex items-center gap-4 justify-end">
           <Link
-            to="/products"
+            to="/dashboard/products"
             className="px-6 py-3 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow"
           >
             Cancel

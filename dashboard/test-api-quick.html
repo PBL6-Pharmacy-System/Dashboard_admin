@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick API Structure Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .result { margin: 10px 0; padding: 10px; background: #252526; border-left: 3px solid #007acc; }
+        .error { border-left-color: #f44336; }
+        .success { border-left-color: #4caf50; }
+        pre { background: #1e1e1e; padding: 10px; overflow-x: auto; }
+        button { background: #0e639c; color: white; border: none; padding: 10px 20px; margin: 5px; cursor: pointer; }
+        button:hover { background: #1177bb; }
+    </style>
+</head>
+<body>
+    <h2>🔍 Quick Dashboard API Test</h2>
+    <button onclick="testAll()">Test All APIs</button>
+    <button onclick="results.innerHTML=''">Clear</button>
+    <div id="results"></div>
+
+    <script>
+        const API = 'http://localhost:3000/api/admin/dashboard';
+        const dates = '?startDate=2025-11-01&endDate=2025-11-26';
+        
+        async function test(name, endpoint) {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return log(name, 'ERROR: No token');
+            
+            try {
+                const res = await fetch(API + endpoint, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                const data = await res.json();
+                log(name, JSON.stringify(data, null, 2), res.ok);
+            } catch (e) {
+                log(name, 'ERROR: ' + e.message, false);
+            }
+        }
+        
+        function log(name, text, ok = true) {
+            const div = document.createElement('div');
+            div.className = 'result ' + (ok ? 'success' : 'error');
+            div.innerHTML = `<strong>${ok ? '✅' : '❌'} ${name}</strong><pre>${text}</pre>`;
+            results.appendChild(div);
+        }
+        
+        async function testAll() {
+            results.innerHTML = '';
+            await test('Revenue', '/revenue' + dates);
+            await test('Top Products', '/top-products' + dates);
+            await test('Orders Stats', '/orders-stats' + dates);
+            await test('Overview', '/overview' + dates);
+            await test('Reviews (3)', '/reviews-stats?limit=3');
+            await test('Recent Activities (10)', '/recent-activities?limit=10');
+        }
+    </script>
+</body>
+</html>

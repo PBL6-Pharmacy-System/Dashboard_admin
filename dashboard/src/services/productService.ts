@@ -52,6 +52,12 @@ export interface Product {
 
 export interface ProductsResponse {
   products: Product[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface CreateProductRequest {
@@ -95,8 +101,31 @@ export interface CreateProductResponse {
 }
 
 export const productService = {
-  async getAllProducts(page: number = 1, limit: number = 1000): Promise<ProductsResponse> {
-    return api.get(`/products?page=${page}&limit=${limit}`);
+  async getAllProducts(page: number = 1, limit: number = 10): Promise<ProductsResponse> {
+    const response = await api.get(`/products?page=${page}&limit=${limit}`);
+    console.log('Raw products API response:', response);
+    
+    // Handle different response structures
+    if (response?.data?.products) {
+      // If response is { success: true, data: { products: [...], pagination: {...} } }
+      return { 
+        products: response.data.products,
+        pagination: response.data.pagination 
+      };
+    } else if (response?.products) {
+      // If response is { products: [...] }
+      return { products: response.products };
+    } else if (Array.isArray(response?.data)) {
+      // If response is { data: [...] }
+      return { products: response.data };
+    } else if (Array.isArray(response)) {
+      // If response is directly an array
+      return { products: response };
+    }
+    
+    // Fallback to empty array
+    console.warn('Unexpected products API response structure:', response);
+    return { products: [] };
   },
 
   async getProductById(id: number): Promise<Product> {

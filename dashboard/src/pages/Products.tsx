@@ -11,7 +11,6 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [products, setProducts] = useState<Product[]>([]);
-  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [selectedMainMenu, setSelectedMainMenu] = useState<MainMenuKey | ''>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
@@ -21,6 +20,10 @@ const Products = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const PRODUCTS_PER_PAGE = 10;
 
   // Trigger refresh when navigating back with reload state
   useEffect(() => {
@@ -31,25 +34,30 @@ const Products = () => {
     }
   }, [location]);
 
-  // Fetch all products initially
+  // Fetch products with pagination
   useEffect(() => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const response = await productService.getAllProducts(1, 1000); // Get up to 1000 products
-        setAllProducts(response.products);
-        setProducts(response.products);
+        const response = await productService.getAllProducts(currentPage, PRODUCTS_PER_PAGE);
+        console.log('Products response:', response);
+        
+        const productsData = response?.products || [];
+        setProducts(productsData);
+        setTotalProducts(response?.pagination?.total || productsData.length);
+        setTotalPages(response?.pagination?.totalPages || Math.ceil((response?.pagination?.total || productsData.length) / PRODUCTS_PER_PAGE));
         setError(null);
       } catch (err) {
         setError('Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.');
         console.error('Error fetching products:', err);
+        setProducts([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProducts();
-  }, [refreshKey]);
+  }, [currentPage, refreshKey]);
 
   // Fetch products when subcategory changes
   useEffect(() => {
@@ -58,7 +66,11 @@ const Products = () => {
         try {
           setLoading(true);
           const response = await categoryService.getProductsByCategory(selectedSubcategory);
-          setProducts(response.products || []);
+          const productsData = response?.products || [];
+          setProducts(productsData);
+          setCurrentPage(1);
+          setTotalProducts(productsData.length);
+          setTotalPages(1);
           setError(null);
         } catch (err) {
           console.error('Error fetching category products:', err);
@@ -69,9 +81,11 @@ const Products = () => {
       };
       fetchCategoryProducts();
     } else {
-      setProducts(allProducts);
+      // Reset page and refresh
+      setCurrentPage(1);
+      setRefreshKey(prev => prev + 1);
     }
-  }, [selectedSubcategory, allProducts]);
+  }, [selectedSubcategory]);
 
   // Handle main menu click
   const handleMainMenuClick = (key: MainMenuKey) => {
@@ -110,9 +124,8 @@ const Products = () => {
       setDeleting(true);
       await productService.deleteProduct(productToDelete.id);
       
-      // Remove product from state
-      setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
-      setAllProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+      // Refresh current page
+      setRefreshKey(prev => prev + 1);
       
       setShowDeleteDialog(false);
       setProductToDelete(null);
@@ -124,8 +137,16 @@ const Products = () => {
     }
   };
 
-  // Filter products by search
-  const filteredProducts = products.filter(product =>
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Filter products by search (client-side)
+  const filteredProducts = (products || []).filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -142,7 +163,7 @@ const Products = () => {
             Products
           </h1>
           <p className="text-sm text-gray-500 mt-1 font-medium">
-            {loading ? 'Đang tải...' : `${filteredProducts.length} sản phẩm`}
+            {loading ? 'Đang tải...' : `Trang ${currentPage}/${totalPages} - ${totalProducts} sản phẩm`}
           </p>
         </div>
         <Link
@@ -371,6 +392,57 @@ const Products = () => {
               </div>
             ))}
           </div>
+
+          {/* Pagination for Grid View */}
+          {!searchQuery && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-6">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1 || loading}
+                className="px-4 py-2 bg-white border-2 border-blue-200 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                ← Trước
+              </button>
+              
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      disabled={loading}
+                      className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                        currentPage === pageNum
+                          ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg'
+                          : 'bg-white border-2 border-blue-200 text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages || loading}
+                className="px-4 py-2 bg-white border-2 border-blue-200 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Tiếp →
+              </button>
+            </div>
+          )}
         </div>
       ) : !loading && !error ? (
         <div className="bg-white rounded-2xl shadow-xl border-2 border-blue-200 overflow-hidden">
@@ -447,6 +519,64 @@ const Products = () => {
               ))}
             </tbody>
           </table>
+          
+          {/* Pagination for List View */}
+          {!searchQuery && totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-6 pb-4">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-200'
+                }`}
+              >
+                ← Trước
+              </button>
+              
+              <div className="flex gap-2">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+                  
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`w-10 h-10 rounded-lg font-medium transition-all duration-200 ${
+                        currentPage === pageNum
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : 'bg-white text-gray-700 hover:bg-gray-100 border-2 border-gray-200'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-blue-600 hover:bg-blue-50 border-2 border-blue-200'
+                }`}
+              >
+                Tiếp →
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
 

@@ -1,114 +1,80 @@
+import { useMemo, type FC } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { ChevronDown } from 'lucide-react';
+import type { SalesData } from '../../types/dashboard.types';
+import { useDashboard } from '../../hooks/useDashboard';
 
-const data = [
-  { name: '1k', value: 25000 },
-  { name: '5k', value: 32000 },
-  { name: '10k', value: 45000 },
-  { name: '15k', value: 38000 },
-  { name: '20k', value: 52000 },
-  { name: '25k', value: 64364.77 },
-  { name: '30k', value: 48000 },
-  { name: '35k', value: 58000 },
-  { name: '40k', value: 68000 },
-  { name: '45k', value: 75000 },
-  { name: '50k', value: 70000 },
-  { name: '55k', value: 78000 },
-  { name: '60k', value: 82000 },
-];
+const formatCurrency = (value: number) => 
+  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value);
 
-interface TooltipPayload {
-  value: number;
-  name: string;
-  dataKey: string;
-}
+const SalesChart: FC = () => {
+  const { revenue, loading, errors, dateRange } = useDashboard();
 
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: TooltipPayload[];
-  label?: string;
-}
-
-const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
-  if (active && payload && payload.length > 0) {
-    return (
-      <div className="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-semibold">
-        ${payload[0].value.toLocaleString()}
-      </div>
-    );
-  }
-  return null;
-};
-
-const SalesChart = () => {
+  const data = useMemo<SalesData[]>(() => {
+    return revenue.map(item => ({
+      date: item.date || '',
+      display: item.date || '', // API already returns formatted date like "28/10"
+      value: item.revenue || 0,
+    }));
+  }, [revenue]); 
   return (
-    <div className="relative h-full bg-gradient-to-br from-white to-blue-50/30 rounded-2xl shadow-soft hover:shadow-soft-lg transition-all duration-300 p-4 lg:p-6 border border-gray-100 overflow-hidden animate-slide-up flex flex-col">
-      {/* Decorative background */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-100 via-purple-50 to-transparent rounded-full -mr-32 -mt-32 opacity-30"></div>
-      
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-lg lg:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-              Sales Details
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">Monthly revenue overview</p>
-          </div>
-          <button className="group flex items-center justify-center gap-2 px-4 py-2 text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 rounded-xl transition-all duration-200 border border-gray-200 shadow-sm hover:shadow w-full sm:w-auto">
-            <span>October</span>
-            <ChevronDown size={14} className="group-hover:translate-y-0.5 transition-transform" />
-          </button>
-        </div>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 h-full flex flex-col">
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-gray-900">Biểu đồ Doanh thu</h2>
+        <p className="text-xs text-gray-500">Dữ liệu từ <span className="font-semibold">{dateRange.startDate}</span> đến <span className="font-semibold">{dateRange.endDate}</span></p>
+      </div>
 
-        <div className="flex-1 bg-white/50 rounded-xl p-3 min-h-0">
+      {loading.revenue ? (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      ) : errors.revenue ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-red-500 text-sm">{errors.revenue}</p>
+        </div>
+      ) : data.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-400 text-sm">Không có dữ liệu</p>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <AreaChart data={data} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.05}/>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                 </linearGradient>
-                <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#3B82F6" floodOpacity="0.3"/>
-                </filter>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} opacity={0.5} />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
               <XAxis 
-                dataKey="name" 
-                stroke="#9CA3AF"
-                axisLine={false}
-                tickLine={false}
-                style={{ fontSize: '11px', fill: '#6B7280', fontWeight: '500' }}
+                dataKey="display" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 11, fill: '#9CA3AF' }} 
+                dy={10}
               />
               <YAxis 
-                stroke="#9CA3AF"
-                axisLine={false}
-                tickLine={false}
-                style={{ fontSize: '11px', fill: '#6B7280', fontWeight: '500' }}
-                ticks={[20000, 40000, 60000, 80000, 100000]}
-                domain={[0, 100000]}
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 11, fill: '#9CA3AF' }} 
+                tickFormatter={(val) => `${val/1000000}M`}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3B82F6', strokeWidth: 2, strokeDasharray: '5 5' }} />
+              <Tooltip 
+                formatter={(value: number) => [formatCurrency(value), 'Doanh thu']}
+                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }}
+              />
               <Area 
                 type="monotone" 
                 dataKey="value" 
                 stroke="#3B82F6" 
-                strokeWidth={3}
-                fill="url(#colorValue)"
-                dot={false}
-                activeDot={{ 
-                  r: 8, 
-                  fill: '#3B82F6', 
-                  stroke: '#fff', 
-                  strokeWidth: 3,
-                  filter: 'url(#shadow)'
-                }}
+                strokeWidth={2}
+                fill="url(#colorSales)" 
+                animationDuration={1000}
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      )}
     </div>
   );
 };

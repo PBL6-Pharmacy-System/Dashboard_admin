@@ -1,665 +1,301 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Edit2, Trash2, ChevronLeft, ChevronRight, AlertCircle, X } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Search, Building2, AlertTriangle, PackageCheck, Calendar, RefreshCcw, Filter } from 'lucide-react';
+import type { Product } from '../types/dashboard.types';
 
-interface Product {
-  id: string;
-  image: string;
-  name: string;
-  category: string;
-  price: number;
-  piece: number;
-  availableColors: string[];
-}
-
-// Mock data - Extended with more products
+// 1. Mock Data (Đã thêm expiryDate để lọc hạn sử dụng)
 const mockProducts: Product[] = [
   {
-    id: '1',
-    image: '/images/apple-watch.jpg',
-    name: 'Apple Watch Series 4',
-    category: 'Digital Product',
-    price: 690.00,
-    piece: 63,
-    availableColors: ['#000000', '#808080', '#FFC0CB']
+    id: '1', image: '', name: 'Panadol Extra', category: 'Thuốc giảm đau', price: 150000,
+    totalStock: 500, minStock: 50, availableColors: [],
+    expiryDate: '2026-12-01', // Còn xa
+    branches: [{ name: 'Kho Tổng', stock: 300 }]
   },
   {
-    id: '2',
-    image: '/images/headset.jpg',
-    name: 'Microsoft Headsquare',
-    category: 'Digital Product',
-    price: 190.00,
-    piece: 13,
-    availableColors: ['#000000', '#FF6B6B', '#4DABF7', '#FFD43B']
+    id: '2', image: '', name: 'Berberin 100mg', category: 'Tiêu hóa', price: 25000,
+    totalStock: 30, minStock: 50, availableColors: [], // Dưới định mức
+    expiryDate: '2026-05-20',
+    branches: [{ name: 'Kho Tổng', stock: 30 }]
   },
   {
-    id: '3',
-    image: '/images/dress.jpg',
-    name: 'Women\'s Dress',
-    category: 'Fashion',
-    price: 640.00,
-    piece: 635,
-    availableColors: ['#862E9C', '#E64980', '#1971C2', '#5F3DC4']
+    id: '3', image: '', name: 'Vitamin C 500mg', category: 'Vitamin', price: 80000,
+    totalStock: 120, minStock: 20, availableColors: [],
+    expiryDate: '2026-01-15', // Sắp hết hạn (Giả sử hiện tại là tháng 11/2025)
+    branches: [{ name: 'Kho Tổng', stock: 120 }]
   },
   {
-    id: '4',
-    image: '/images/samsung.jpg',
-    name: 'Samsung A50',
-    category: 'Mobile',
-    price: 400.00,
-    piece: 67,
-    availableColors: ['#5F3DC4', '#000000', '#C92A2A']
+    id: '4', image: '', name: 'Khẩu trang Y tế', category: 'Vật tư', price: 35000,
+    totalStock: 1000, minStock: 200, availableColors: [],
+    expiryDate: '2028-01-01',
+    branches: [{ name: 'Kho Tổng', stock: 1000 }]
   },
   {
-    id: '5',
-    image: '/images/camera.jpg',
-    name: 'Camera',
-    category: 'Electronic',
-    price: 420.00,
-    piece: 52,
-    availableColors: ['#5F3DC4', '#000000', '#C92A2A']
-  },
-  {
-    id: '6',
-    image: '/images/headset-2.jpg',
-    name: 'Microsoft Headsquare Pro',
-    category: 'Digital Product',
-    price: 190.00,
-    piece: 13,
-    availableColors: ['#000000', '#FF6B6B', '#4DABF7', '#FFD43B']
-  },
-  {
-    id: '7',
-    image: '/images/dress-2.jpg',
-    name: 'Women\'s Evening Dress',
-    category: 'Fashion',
-    price: 640.00,
-    piece: 635,
-    availableColors: ['#862E9C', '#E64980', '#1971C2', '#5F3DC4']
-  },
-  {
-    id: '8',
-    image: '/images/iphone.jpg',
-    name: 'iPhone 13 Pro',
-    category: 'Mobile',
-    price: 1099.00,
-    piece: 89,
-    availableColors: ['#000000', '#C0C0C0', '#FFD700', '#87CEEB']
-  },
-  {
-    id: '9',
-    image: '/images/laptop.jpg',
-    name: 'MacBook Pro 16"',
-    category: 'Electronic',
-    price: 2499.00,
-    piece: 24,
-    availableColors: ['#C0C0C0', '#2F4F4F']
-  },
-  {
-    id: '10',
-    image: '/images/tablet.jpg',
-    name: 'iPad Air',
-    category: 'Digital Product',
-    price: 599.00,
-    piece: 145,
-    availableColors: ['#C0C0C0', '#FFC0CB', '#87CEEB', '#9370DB']
-  },
-  {
-    id: '11',
-    image: '/images/shoes.jpg',
-    name: 'Nike Air Max',
-    category: 'Fashion',
-    price: 180.00,
-    piece: 234,
-    availableColors: ['#000000', '#FFFFFF', '#FF0000', '#0000FF']
-  },
-  {
-    id: '12',
-    image: '/images/smartwatch.jpg',
-    name: 'Samsung Galaxy Watch',
-    category: 'Digital Product',
-    price: 349.00,
-    piece: 78,
-    availableColors: ['#000000', '#C0C0C0', '#FFD700']
-  },
-  {
-    id: '13',
-    image: '/images/headphones.jpg',
-    name: 'Sony WH-1000XM4',
-    category: 'Electronic',
-    price: 349.00,
-    piece: 156,
-    availableColors: ['#000000', '#C0C0C0', '#4169E1']
-  },
-  {
-    id: '14',
-    image: '/images/keyboard.jpg',
-    name: 'Mechanical Keyboard RGB',
-    category: 'Electronic',
-    price: 129.00,
-    piece: 89,
-    availableColors: ['#000000', '#FFFFFF', '#FF1493']
-  },
-  {
-    id: '15',
-    image: '/images/mouse.jpg',
-    name: 'Gaming Mouse Pro',
-    category: 'Electronic',
-    price: 79.00,
-    piece: 267,
-    availableColors: ['#000000', '#FF0000', '#00FF00']
-  },
-  {
-    id: '16',
-    image: '/images/jacket.jpg',
-    name: 'Leather Jacket',
-    category: 'Fashion',
-    price: 299.00,
-    piece: 45,
-    availableColors: ['#000000', '#8B4513', '#696969']
-  },
-  {
-    id: '17',
-    image: '/images/sunglasses.jpg',
-    name: 'Ray-Ban Aviator',
-    category: 'Fashion',
-    price: 159.00,
-    piece: 123,
-    availableColors: ['#000000', '#FFD700', '#C0C0C0']
-  },
-  {
-    id: '18',
-    image: '/images/backpack.jpg',
-    name: 'Travel Backpack',
-    category: 'Fashion',
-    price: 89.00,
-    piece: 198,
-    availableColors: ['#000000', '#4169E1', '#808080', '#8B0000']
-  },
-  {
-    id: '19',
-    image: '/images/speaker.jpg',
-    name: 'Bluetooth Speaker',
-    category: 'Electronic',
-    price: 129.00,
-    piece: 234,
-    availableColors: ['#000000', '#FF4500', '#4169E1', '#32CD32']
-  },
-  {
-    id: '20',
-    image: '/images/tablet-2.jpg',
-    name: 'Samsung Galaxy Tab',
-    category: 'Digital Product',
-    price: 449.00,
-    piece: 67,
-    availableColors: ['#000000', '#C0C0C0', '#FFB6C1']
-  },
-  {
-    id: '21',
-    image: '/images/earbuds.jpg',
-    name: 'AirPods Pro',
-    category: 'Electronic',
-    price: 249.00,
-    piece: 312,
-    availableColors: ['#FFFFFF']
-  },
-  {
-    id: '22',
-    image: '/images/monitor.jpg',
-    name: '4K Gaming Monitor',
-    category: 'Electronic',
-    price: 599.00,
-    piece: 43,
-    availableColors: ['#000000', '#C0C0C0']
-  },
-  {
-    id: '23',
-    image: '/images/phone-case.jpg',
-    name: 'Silicone Phone Case',
-    category: 'Mobile',
-    price: 29.00,
-    piece: 567,
-    availableColors: ['#000000', '#FF1493', '#00CED1', '#FFD700', '#9370DB']
-  },
-  {
-    id: '24',
-    image: '/images/charger.jpg',
-    name: 'Fast Charger 65W',
-    category: 'Electronic',
-    price: 45.00,
-    piece: 423,
-    availableColors: ['#FFFFFF', '#000000']
-  },
-  {
-    id: '25',
-    image: '/images/webcam.jpg',
-    name: 'HD Webcam 1080p',
-    category: 'Electronic',
-    price: 89.00,
-    piece: 178,
-    availableColors: ['#000000', '#FFFFFF']
+    id: '5', image: '', name: 'Siro Ho Prospan', category: 'Thuốc Ho', price: 110000,
+    totalStock: 15, minStock: 20, availableColors: [], // Dưới định mức + Sắp hết hạn
+    expiryDate: '2026-02-01', 
+    branches: [{ name: 'Kho Tổng', stock: 15 }]
   },
 ];
 
-const ProductStock: React.FC = () => {
-  const [products] = useState<Product[]>(mockProducts);
+// Định nghĩa kiểu lọc
+type FilterType = 'ALL' | 'LOW_STOCK' | 'EXPIRING_SOON';
+
+const ProductStock = () => {
+  const [selectedBranch, setSelectedBranch] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const itemsPerPage = 7;
+  
+  // 2. State quản lý thẻ đang được chọn (Mặc định là ALL)
+  const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
 
-  // Low stock threshold
-  const LOW_STOCK_THRESHOLD = 50;
+  // Hàm kiểm tra sắp hết hạn (Ví dụ: < 90 ngày tính từ giả định hôm nay là 2025-11-20)
+  const checkIsExpiring = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const today = new Date('2025-11-20'); // Giả lập ngày hiện tại
+    const expiry = new Date(dateStr);
+    const diffTime = expiry.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 && diffDays <= 90;
+  };
 
-  // Filter products by search
+  // 3. Logic tính toán số liệu thống kê (Luôn tính trên TẤT CẢ dữ liệu gốc)
+  const stockStats = useMemo(() => {
+    const lowStockCount = mockProducts.filter(item => item.totalStock < item.minStock).length;
+    const expiringCount = mockProducts.filter(item => checkIsExpiring(item.expiryDate)).length;
+    const totalUnits = mockProducts.reduce((acc, item) => acc + item.totalStock, 0);
+
+    return {
+      totalItems: mockProducts.length,
+      lowStock: lowStockCount,
+      expiring: expiringCount,
+      totalUnits: totalUnits
+    };
+  }, []);
+
+  // 4. Logic lọc dữ liệu hiển thị bảng
   const filteredProducts = useMemo(() => {
-    if (!searchQuery.trim()) return products;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return products.filter(product =>
-      product.name.toLowerCase().includes(query) ||
-      product.category.toLowerCase().includes(query) ||
-      product.id.toLowerCase().includes(query)
-    );
-  }, [products, searchQuery]);
+    return mockProducts.filter(product => {
+      // Lọc theo Search
+      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            product.id.includes(searchQuery);
+      
+      // Lọc theo Chi nhánh (Logic giả lập)
+      const matchesBranch = selectedBranch === 'All' ? true : 
+                            product.branches.some(b => b.name === selectedBranch && b.stock > 0);
 
-  // Get search suggestions
-  const searchSuggestions = useMemo(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2) return [];
-    
-    const query = searchQuery.toLowerCase().trim();
-    const suggestions: { type: 'product' | 'category'; value: string; match: string }[] = [];
-    
-    // Get unique categories that match
-    const categories = new Set<string>();
-    products.forEach(p => {
-      if (p.category.toLowerCase().includes(query)) {
-        categories.add(p.category);
+      // Lọc theo Click Card (Quan trọng)
+      let matchesCardFilter = true;
+      if (activeFilter === 'LOW_STOCK') {
+        matchesCardFilter = product.totalStock < product.minStock;
+      } else if (activeFilter === 'EXPIRING_SOON') {
+        matchesCardFilter = checkIsExpiring(product.expiryDate);
       }
-    });
-    
-    categories.forEach(cat => {
-      suggestions.push({ type: 'category', value: cat, match: cat });
-    });
-    
-    // Get matching products
-    products.forEach(p => {
-      if (p.name.toLowerCase().includes(query)) {
-        suggestions.push({ type: 'product', value: p.name, match: p.name });
-      }
-    });
-    
-    return suggestions.slice(0, 8); // Limit to 8 suggestions
-  }, [products, searchQuery]);
 
-  // Highlight search term in text
-  const highlightText = (text: string, query: string) => {
-    if (!query.trim()) return text;
-    
-    const regex = new RegExp(`(${query})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, index) => 
-      regex.test(part) ? (
-        <mark key={index} className="bg-yellow-200 text-gray-900 font-semibold">
-          {part}
-        </mark>
-      ) : (
-        part
-      )
+      return matchesSearch && matchesBranch && matchesCardFilter;
+    });
+  }, [searchQuery, selectedBranch, activeFilter]);
+
+  // Component Card nhỏ để tái sử dụng
+  const FilterCard = ({ 
+    type, 
+    title, 
+    value, 
+    icon, 
+    subText, 
+    colorClass 
+  }: { 
+    type: FilterType, title: string, value: number | string, icon: React.ReactNode, subText?: string, colorClass: string 
+  }) => {
+    const isActive = activeFilter === type;
+    return (
+      <div 
+        onClick={() => setActiveFilter(type)}
+        className={`
+          relative p-4 rounded-xl border cursor-pointer transition-all duration-200
+          ${isActive 
+            ? 'bg-blue-50 border-blue-500 ring-1 ring-blue-500 shadow-md transform scale-[1.02]' 
+            : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm'
+          }
+        `}
+      >
+        <div className="text-gray-500 text-xs font-bold uppercase mb-1">{title}</div>
+        <div className={`text-2xl font-bold flex items-center gap-2 ${colorClass}`}>
+          {value} {icon}
+        </div>
+        {subText && <p className={`text-xs mt-1 ${isActive ? 'text-blue-600 font-medium' : 'text-gray-400'}`}>{subText}</p>}
+        
+        {/* Dấu check khi Active */}
+        {isActive && (
+          <div className="absolute top-2 right-2">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+            </span>
+          </div>
+        )}
+      </div>
     );
-  };
-
-  // Calculate statistics
-  const totalProducts = products.length;
-  const totalStock = products.reduce((sum, p) => sum + p.piece, 0);
-  const lowStockCount = products.filter(p => p.piece < LOW_STOCK_THRESHOLD).length;
-  const totalValue = products.reduce((sum, p) => sum + (p.price * p.piece), 0);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const goToPreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
-
-  const handleEdit = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    console.log('Edit product:', product);
-    alert(`Edit product: ${product?.name}\nThis will navigate to edit page or open edit modal.`);
-    // TODO: Navigate to edit page
-    // navigate(`/products/edit/${productId}`);
-  };
-
-  const handleDelete = (productId: string) => {
-    const product = products.find(p => p.id === productId);
-    if (window.confirm(`Are you sure you want to delete "${product?.name}"?\n\nThis action cannot be undone.`)) {
-      console.log('Delete product:', productId);
-      alert(`Product "${product?.name}" has been deleted.\n\nIn production, this would call the API to delete the product.`);
-      // TODO: Call API to delete product
-      // await deleteProduct(productId);
-      // Refresh product list
-    }
-  };
-
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    setCurrentPage(1);
-    setShowSuggestions(value.trim().length >= 2);
-  };
-
-  const handleSelectSuggestion = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    setCurrentPage(1);
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    setShowSuggestions(false);
-    setCurrentPage(1);
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
-      {/* Header with Stats */}
-      <div className="flex-shrink-0 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-800">Product Stock</h1>
-          
-          {/* Search Bar */}
-          <div className="relative w-96">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" />
-            <input
-              type="text"
-              placeholder="Search by product name, category, or ID..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onFocus={() => searchQuery.length >= 2 && setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={handleClearSearch}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-full transition-colors"
-                title="Clear search"
+    <div className="flex-1 flex flex-col h-full p-4 gap-4 bg-gray-50/30 overflow-hidden">
+      
+      {/* HEADER */}
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Quản lý Kho hàng</h1>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+            <span>Trạng thái lọc:</span>
+            <span className={`font-bold px-2 py-0.5 rounded text-xs ${
+              activeFilter === 'ALL' ? 'bg-gray-200 text-gray-700' :
+              activeFilter === 'LOW_STOCK' ? 'bg-red-100 text-red-700' :
+              'bg-orange-100 text-orange-700'
+            }`}>
+              {activeFilter === 'ALL' ? 'Tất cả' : 
+               activeFilter === 'LOW_STOCK' ? 'Sản phẩm thiếu hàng' : 'Sản phẩm sắp hết hạn'}
+            </span>
+            {activeFilter !== 'ALL' && (
+              <button 
+                onClick={() => setActiveFilter('ALL')}
+                className="text-blue-600 hover:underline flex items-center gap-1 text-xs"
               >
-                <X className="w-4 h-4 text-gray-400" />
+                <RefreshCcw size={12}/> Đặt lại
               </button>
-            )}
-
-            {/* Search Suggestions Dropdown */}
-            {showSuggestions && searchSuggestions.length > 0 && (
-              <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-80 overflow-y-auto">
-                <div className="p-2">
-                  <p className="text-xs text-gray-500 px-3 py-2 font-semibold uppercase">
-                    Suggestions ({searchSuggestions.length})
-                  </p>
-                  {searchSuggestions.map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSelectSuggestion(suggestion.value)}
-                      className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-3 group"
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        suggestion.type === 'category' 
-                          ? 'bg-purple-100 text-purple-600' 
-                          : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        {suggestion.type === 'category' ? (
-                          <span className="text-xs font-bold">CAT</span>
-                        ) : (
-                          <span className="text-xs font-bold">PRD</span>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {highlightText(suggestion.match, searchQuery)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {suggestion.type === 'category' ? 'Category' : 'Product'}
-                        </p>
-                      </div>
-                      <Search className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* No Results Message */}
-            {showSuggestions && searchQuery.length >= 2 && searchSuggestions.length === 0 && (
-              <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-200 z-50 p-4">
-                <div className="text-center text-gray-500">
-                  <Search className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                  <p className="text-sm">No suggestions found</p>
-                  <p className="text-xs mt-1">Try different keywords</p>
-                </div>
-              </div>
             )}
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Products</p>
-            <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
+        {/* Filter & Search Controls */}
+        <div className="flex gap-2 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Tìm thuốc, mã lô..." 
+              className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Stock</p>
-            <p className="text-2xl font-bold text-blue-600">{totalStock.toLocaleString()}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Low Stock Alert</p>
-            <p className="text-2xl font-bold text-red-600">{lowStockCount}</p>
-          </div>
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <p className="text-sm text-gray-600 mb-1">Total Value</p>
-            <p className="text-2xl font-bold text-green-600">${totalValue.toLocaleString()}</p>
+          <div className="relative">
+            <select 
+              className="appearance-none bg-white border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+            >
+              <option value="All">Toàn bộ kho</option>
+              <option value="Kho Tổng">Kho Tổng</option>
+              <option value="CN Quận 1">CN Quận 1</option>
+            </select>
+            <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
           </div>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+      {/* INTERACTIVE STATS CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Card 1: Tổng quan (Reset Filter) */}
+        <FilterCard 
+          type="ALL"
+          title="Tổng đơn vị thuốc"
+          value={stockStats.totalUnits.toLocaleString()}
+          icon={<PackageCheck size={20} />}
+          colorClass="text-gray-900"
+          subText="Nhấn để xem tất cả"
+        />
+
+        {/* Card 2: Cảnh báo Dưới định mức */}
+        <FilterCard 
+          type="LOW_STOCK"
+          title="Sản phẩm dưới định mức"
+          value={stockStats.lowStock}
+          icon={<AlertTriangle size={20} />}
+          colorClass="text-red-600"
+          subText="Cần nhập hàng ngay"
+        />
+
+        {/* Card 3: Cảnh báo Sắp hết hạn */}
+        <FilterCard 
+          type="EXPIRING_SOON"
+          title="Sắp hết hạn (3 tháng)"
+          value={stockStats.expiring}
+          icon={<Calendar size={20} />}
+          colorClass="text-orange-500"
+          subText="Cần đẩy bán gấp"
+        />
+      </div>
+
+      {/* MAIN TABLE */}
+      <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-auto flex-1">
-          <table className="w-full">
-            <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 z-10">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-200 sticky top-0 z-10">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Image
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Product Name
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Piece
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Available Color
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Action
-                </th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Sản phẩm</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Danh mục</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-center">Tồn kho</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase">Hạn dùng</th>
+                <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase text-right">Trạng thái</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {paginatedProducts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <div className="flex flex-col items-center gap-2">
-                      <Search className="w-12 h-12 text-gray-300" />
-                      <p className="text-lg font-medium">No products found</p>
-                      <p className="text-sm">Try adjusting your search</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                paginatedProducts.map((product) => (
-                  <tr
-                    key={product.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    {/* Image */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center overflow-hidden shadow-md">
-                        <div className="w-10 h-10 bg-black/20 rounded transition-transform hover:scale-110"></div>
-                      </div>
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900">{product.name}</div>
+                      <div className="text-xs text-gray-400">ID: {product.id}</div>
                     </td>
-
-                    {/* Product Name */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">
-                        {searchQuery ? highlightText(product.name, searchQuery) : product.name}
+                    <td className="px-6 py-4 text-sm text-gray-600">{product.category}</td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`font-bold ${product.totalStock < product.minStock ? 'text-red-600' : 'text-gray-900'}`}>
+                        {product.totalStock}
                       </span>
+                      <span className="text-xs text-gray-400 ml-1">/{product.minStock}</span>
                     </td>
-
-                    {/* Category */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600">
-                        {searchQuery ? highlightText(product.category, searchQuery) : product.category}
-                      </span>
-                    </td>
-
-                    {/* Price */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-900">
-                        ${product.price.toFixed(2)}
-                      </span>
-                    </td>
-
-                    {/* Piece */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-medium ${
-                          product.piece < LOW_STOCK_THRESHOLD 
-                            ? 'text-red-600' 
-                            : 'text-gray-900'
-                        }`}>
-                          {product.piece}
-                        </span>
-                        {product.piece < LOW_STOCK_THRESHOLD && (
-                          <div title={`Low stock: Only ${product.piece} left!`}>
-                            <AlertCircle className="w-4 h-4 text-red-500" />
-                          </div>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Available Colors */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {product.availableColors.slice(0, 4).map((color, index) => (
-                          <div
-                            key={index}
-                            className="w-6 h-6 rounded-full border-2 border-white shadow-md cursor-pointer transition-transform hover:scale-125"
-                            style={{ backgroundColor: color }}
-                            title={color}
-                          />
-                        ))}
-                        {product.availableColors.length > 4 && (
-                          <span className="text-xs text-gray-500 ml-1">
-                            +{product.availableColors.length - 4}
+                    <td className="px-6 py-4 text-sm">
+                       <div className="flex items-center gap-1">
+                          {checkIsExpiring(product.expiryDate) && <AlertTriangle size={14} className="text-orange-500"/>}
+                          <span className={checkIsExpiring(product.expiryDate) ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                            {product.expiryDate}
                           </span>
-                        )}
-                      </div>
+                       </div>
                     </td>
-
-                    {/* Actions */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEdit(product.id)}
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 text-right">
+                      {product.totalStock < product.minStock && (
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700 ml-2">
+                          Thiếu hàng
+                        </span>
+                      )}
+                      {checkIsExpiring(product.expiryDate) && (
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700 ml-2">
+                          Cận date
+                        </span>
+                      )}
+                      {!(product.totalStock < product.minStock) && !checkIsExpiring(product.expiryDate) && (
+                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
+                          Ổn định
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    <div className="flex flex-col items-center gap-2">
+                      <Filter className="w-8 h-8 text-gray-300" />
+                      <p>Không tìm thấy sản phẩm nào theo bộ lọc này.</p>
+                      <button 
+                        onClick={() => setActiveFilter('ALL')}
+                        className="text-blue-600 text-sm font-medium hover:underline"
+                      >
+                        Xem tất cả sản phẩm
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-semibold text-gray-900">{filteredProducts.length === 0 ? 0 : startIndex + 1}</span> to{' '}
-            <span className="font-semibold text-gray-900">{Math.min(endIndex, filteredProducts.length)}</span> of{' '}
-            <span className="font-semibold text-gray-900">{filteredProducts.length}</span> results
-            {searchQuery && (
-              <span className="ml-2 text-blue-600">
-                (filtered from {products.length} total)
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={goToPreviousPage}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-lg border border-gray-200 transition-all ${
-                currentPage === 1
-                  ? 'opacity-50 cursor-not-allowed bg-gray-50'
-                  : 'hover:bg-gray-50 hover:border-gray-300 active:scale-95'
-              }`}
-              title="Previous page"
-            >
-              <ChevronLeft className="w-4 h-4 text-gray-600" />
-            </button>
-            
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
-                Page
-              </span>
-              <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg font-semibold text-sm">
-                {currentPage}
-              </span>
-              <span className="text-sm text-gray-600">
-                of {totalPages || 1}
-              </span>
-            </div>
-            
-            <button
-              onClick={goToNextPage}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`p-2 rounded-lg border border-gray-200 transition-all ${
-                currentPage === totalPages || totalPages === 0
-                  ? 'opacity-50 cursor-not-allowed bg-gray-50'
-                  : 'hover:bg-gray-50 hover:border-gray-300 active:scale-95'
-              }`}
-              title="Next page"
-            >
-              <ChevronRight className="w-4 h-4 text-gray-600" />
-            </button>
-          </div>
         </div>
       </div>
     </div>

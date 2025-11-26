@@ -5,22 +5,27 @@ import {
   Inbox, 
   List, 
   Archive,
-  DollarSign,
-  Calendar,
-  CheckSquare,
   Users,
-  FileText,
-  BarChart3,
-  UserCircle,
-  Table,
   Settings,
   LogOut
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
+import { useState, useEffect } from 'react';
 
 const Sidebar = () => {
   const navigate = useNavigate();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const user = await authService.getCurrentUser();
+      if (user) {
+        setUserRole(user.role_name);
+      }
+    };
+    loadUser();
+  }, []);
 
   const handleLogout = async () => {
     if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
@@ -29,25 +34,30 @@ const Sidebar = () => {
     }
   };
 
-  const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
-    { icon: Package, label: 'Products', path: '/dashboard/products' },
-    { icon: Heart, label: 'Favorites', path: '/dashboard/favorites' },
-    { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox' },
-    { icon: List, label: 'Order Lists', path: '/dashboard/orders' },
-    { icon: Archive, label: 'Product Stock', path: '/dashboard/stock' },
+  const allMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', adminOnly: true },
+    { icon: Package, label: 'Products', path: '/dashboard/products', adminOnly: false },
+    { icon: Heart, label: 'Favorites', path: '/dashboard/favorites', adminOnly: false },
+    { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox', adminOnly: false },
+    { icon: List, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
+    { icon: Archive, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
+    { icon: List, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
+    { icon: Users, label: 'Staff Accounts', path: '/dashboard/staff', adminOnly: true },
+    { icon: Users, label: 'Customers', path: '/dashboard/customers', adminOnly: false },
+    { icon: Package, label: 'Stock Transfer', path: '/dashboard/stock-transfer', adminOnly: false },
   ];
 
-  const pageItems = [
-    { icon: DollarSign, label: 'Pricing', path: '/dashboard/pricing' },
-    { icon: Calendar, label: 'Calendar', path: '/dashboard/calendar' },
-    { icon: CheckSquare, label: 'To-Do', path: '/dashboard/todo' },
-    { icon: Users, label: 'Contact', path: '/dashboard/contact' },
-    { icon: FileText, label: 'Invoice', path: '/dashboard/invoice' },
-    { icon: BarChart3, label: 'UI Elements', path: '/dashboard/ui-elements' },
-    { icon: UserCircle, label: 'Team', path: '/dashboard/team' },
-    { icon: Table, label: 'Table', path: '/dashboard/table' },
-  ];
+  // Filter menu items based on role
+  const menuItems = allMenuItems.filter(item => {
+    // Check if user is admin (case-insensitive)
+    const isAdmin = userRole?.toLowerCase() === 'admin';
+    
+    if (isAdmin) {
+      return true; // Admin sees all tabs
+    }
+    return !item.adminOnly; // Staff doesn't see Dashboard and Staff Accounts
+  });
+
 
   return (
     <aside className="w-64 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0 shadow-lg">
@@ -86,41 +96,6 @@ const Sidebar = () => {
               )}
             </NavLink>
           ))}
-        </div>
-
-        {/* Pages Section */}
-        <div className="mt-8">
-          <p className="text-xs font-bold text-gray-400 uppercase px-4 mb-3 tracking-wider flex items-center gap-2">
-            <span className="h-px flex-1 bg-gradient-to-r from-gray-300 to-transparent"></span>
-            Pages
-            <span className="h-px flex-1 bg-gradient-to-l from-gray-300 to-transparent"></span>
-          </p>
-          <div className="space-y-1.5">
-            {pageItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end
-                className={({ isActive }) =>
-                  `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden ${
-                    isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30'
-                      : 'text-gray-600 hover:bg-white hover:shadow-sm'
-                  }`
-                }
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent animate-shimmer"></div>
-                    )}
-                    <item.icon size={20} className={`flex-shrink-0 ${isActive ? 'drop-shadow-sm' : 'group-hover:scale-110 transition-transform'}`} />
-                    <span className="text-sm font-semibold relative z-10">{item.label}</span>
-                  </>
-                )}
-              </NavLink>
-            ))}
-          </div>
         </div>
       </nav>
 

@@ -1,87 +1,154 @@
-import { Users, Package, TrendingUp, Clock } from 'lucide-react';
+import { useMemo } from 'react';
+import { Users, ShoppingBag, Calendar, Filter, TrendingUp, Package } from 'lucide-react';
 import StatsCard from '../components/dashboard/StatsCard';
 import SalesChart from '../components/dashboard/SalesChart';
-import DealsTable from '../components/dashboard/DealsTable';
+import TopProducts from '../components/dashboard/TopProducts';
+import OrdersChart from '../components/dashboard/OrdersChart';
+import ReviewsList from '../components/dashboard/ReviewsList';
+import RecentActivities from '../components/dashboard/RecentActivities';
+import CategoryChart from '../components/dashboard/CategoryChart';
 import type { StatCardData } from '../types/dashboard.types';
+import { useDashboard } from '../hooks/useDashboard';
 
 const Dashboard = () => {
-  const statsData: StatCardData[] = [
-    {
-      title: 'Total User',
-      value: '40,689',
-      change: 8.5,
-      changeLabel: 'Up from yesterday',
-      icon: <Users size={20} className="text-purple-600" />,
-      bgColor: 'bg-purple-50',
-    },
-    {
-      title: 'Total Order',
-      value: '10293',
-      change: 1.3,
-      changeLabel: 'Up from past week',
-      icon: <Package size={20} className="text-yellow-600" />,
-      bgColor: 'bg-yellow-50',
-    },
-    {
-      title: 'Total Sales',
-      value: '$89,000',
-      change: -4.3,
-      changeLabel: 'Down from yesterday',
-      icon: <TrendingUp size={20} className="text-green-600" />,
-      bgColor: 'bg-green-50',
-    },
-    {
-      title: 'Total Pending',
-      value: '2040',
-      change: 1.8,
-      changeLabel: 'Up from yesterday',
-      icon: <Clock size={20} className="text-red-600" />,
-      bgColor: 'bg-red-50',
-    },
-  ];
+  const { dateRange, setDateRange, overview, loading } = useDashboard();
+
+  // Hàm xử lý khi đổi ngày
+  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
+    setDateRange({ ...dateRange, [field]: value });
+  };
+
+  // Generate stats data from overview
+  const statsData = useMemo<StatCardData[]>(() => {
+    if (!overview) {
+      return [];
+    }
+
+    const formatCurrency = (value: number) => 
+      new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value || 0) + 'đ';
+    
+    // Parse growth percentage from string like "+100%" or "-50%"
+    const parseGrowth = (growthStr: string): number => {
+      const match = growthStr.match(/([+-]?\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    };
+
+    return [
+      {
+        title: 'Tổng Doanh Thu',
+        value: formatCurrency(overview.revenue?.thisMonth || 0),
+        change: parseGrowth(overview.revenue?.growth || '0%'),
+        changeLabel: 'so với tháng trước',
+        icon: <ShoppingBag size={20} className="text-blue-600" />,
+        bgColor: 'bg-blue-100',
+      },
+      {
+        title: 'Tổng Đơn Hàng',
+        value: (overview.orders?.total || 0).toString(),
+        change: overview.orders?.newThisMonth || 0,
+        changeLabel: 'đơn mới trong tháng này',
+        icon: <TrendingUp size={20} className="text-emerald-600" />,
+        bgColor: 'bg-emerald-100',
+      },
+      {
+        title: 'Khách Hàng',
+        value: (overview.customers?.total || 0).toString(),
+        change: overview.customers?.newThisMonth || 0,
+        changeLabel: 'khách hàng mới tháng này',
+        icon: <Users size={20} className="text-purple-600" />,
+        bgColor: 'bg-purple-100',
+      },
+      {
+        title: 'Sản Phẩm',
+        value: (overview.products?.total || 0).toString(),
+        change: overview.products?.lowStock || 0,
+        changeLabel: 'sản phẩm sắp hết hàng',
+        icon: <Package size={20} className="text-orange-600" />,
+        bgColor: 'bg-orange-100',
+      },
+    ];
+  }, [overview]);
 
   return (
-    <div className="h-full flex flex-col gap-3 lg:gap-4 animate-fade-in overflow-hidden">
-      {/* Header Section - Compact */}
-      <div className="flex items-center justify-between flex-shrink-0">
+    <div className="h-full flex flex-col gap-4 p-4 bg-gray-50/30 overflow-y-auto">
+      {/* Header & Global Filter */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 flex-shrink-0">
         <div>
-          <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent">
-            Dashboard
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5 font-medium">Welcome back! Here's what's happening today.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Báo cáo Kinh Doanh</h1>
+          <p className="text-sm text-gray-500">Số liệu tài chính & hiệu quả bán hàng.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="px-3 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 transition-all duration-200 shadow-sm hover:shadow">
-            Export
-          </button>
-          <button className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-lg text-xs font-semibold transition-all duration-200 shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50">
-            Add New
-          </button>
-        </div>
-      </div>
 
-      {/* Stats Cards - Compact */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 flex-shrink-0">
-        {statsData.map((stat, index) => (
-          <div 
-            key={index}
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <StatsCard data={stat} />
+        {/* GLOBAL DATE FILTER */}
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-lg border border-gray-200 shadow-sm">
+          <div className="px-2 text-gray-500 flex items-center gap-2">
+            <Filter size={16} />
+            <span className="text-xs font-semibold uppercase">Lọc thời gian:</span>
           </div>
-        ))}
+          <input 
+            type="date" 
+            value={dateRange.startDate}
+            onChange={(e) => handleDateChange('startDate', e.target.value)}
+            className="bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-blue-500"
+          />
+          <span className="text-gray-400">-</span>
+          <input 
+            type="date" 
+            value={dateRange.endDate}
+            onChange={(e) => handleDateChange('endDate', e.target.value)}
+            className="bg-gray-50 border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-blue-500"
+          />
+          <button className="bg-blue-600 text-white p-1.5 rounded hover:bg-blue-700 transition-colors">
+            <Calendar size={16} />
+          </button>
+        </div>
       </div>
 
-      {/* Charts Row - Tràn hết chiều ngang và chiều dọc còn lại */}
-      <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 gap-3 lg:gap-4 min-h-0 overflow-hidden">
-        {/* Sales Chart */}
-        <div className="h-full overflow-hidden" style={{ animationDelay: '400ms' }}>
+      {/* Stats Cards */}
+      {loading.overview ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-32 bg-white rounded-xl border border-gray-200 animate-pulse"></div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
+          {statsData.map((stat, index) => (
+            <div key={index} className="h-32">
+              <StatsCard data={stat} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Main Charts Row */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 min-h-[400px]">
+        {/* Revenue Chart (2/3 width) */}
+        <div className="xl:col-span-2 h-full">
           <SalesChart />
         </div>
+        {/* Category Chart (1/3 width) */}
+        <div className="xl:col-span-1 h-full">
+          <CategoryChart />
+        </div>
+      </div>
 
-        {/* Deals Table */}
-        <div className="h-full overflow-hidden" style={{ animationDelay: '500ms' }}>
-          <DealsTable />
+      {/* Second Row: Orders Chart & Top Products */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[350px]">
+        <div className="h-full">
+          <OrdersChart />
+        </div>
+        <div className="h-full">
+          <TopProducts />
+        </div>
+      </div>
+
+      {/* Third Row: Reviews & Recent Activities */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 min-h-[400px] pb-4">
+        <div className="h-full">
+          <ReviewsList />
+        </div>
+        <div className="h-full">
+          <RecentActivities />
         </div>
       </div>
     </div>

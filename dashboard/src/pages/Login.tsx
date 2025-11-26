@@ -23,15 +23,34 @@ const Login = () => {
       const result = await authService.login(formData.username, formData.password);
       
       if (result.success && result.data) {
-        localStorage.setItem('accessToken', result.data.token);
-        localStorage.setItem('refreshToken', result.data.refreshToken);
-        localStorage.setItem('user', JSON.stringify(result.data.user));
-        navigate('/dashboard');
+        sessionStorage.setItem('accessToken', result.data.token);
+        sessionStorage.setItem('refreshToken', result.data.refreshToken);
+        // Store user with role_name extracted from roles
+        const userData = {
+          ...result.data.user,
+          role_name: result.data.user.roles?.role_name || 'USER'
+        };
+        sessionStorage.setItem('user', JSON.stringify(userData));
+        
+        // Redirect based on role
+        const isAdmin = userData.role_name?.toLowerCase() === 'admin';
+        navigate(isAdmin ? '/dashboard' : '/dashboard/products');
       } else {
         setError(result.error || 'Đăng nhập thất bại');
       }
     } catch (err) {
-      setError('Không thể kết nối đến server');
+      // More specific error messages
+      if (err instanceof Error) {
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          setError('Tên đăng nhập hoặc mật khẩu không đúng');
+        } else if (err.message.includes('fetch')) {
+          setError('Không thể kết nối đến server. Vui lòng kiểm tra kết nối.');
+        } else {
+          setError(err.message || 'Đã có lỗi xảy ra');
+        }
+      } else {
+        setError('Không thể kết nối đến server');
+      }
       console.error('Login error:', err);
     } finally {
       setLoading(false);
