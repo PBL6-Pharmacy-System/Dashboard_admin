@@ -22,7 +22,18 @@ export const categoryService = {
     return api.get(`/categories/${id}`);
   },
 
+  // DEPRECATED: This endpoint does not exist in backend
   async getProductsByCategory(categoryName: string) {
-    return api.get(`/products/category/${encodeURIComponent(categoryName)}`);
+    console.warn('[categoryService] getProductsByCategory is deprecated - use getProductsByCategoryId instead');
+    return { products: [] };
+  },
+
+  // Use categoryId to fetch products - this is the correct endpoint
+  async getProductsByCategoryId(categoryId: number, page: number = 1, limit: number = 20) {
+    const response = await api.get(`/products?categoryId=${categoryId}&page=${page}&limit=${limit}`);
+    return {
+      products: response?.data?.products || response?.products || [],
+      pagination: response?.data?.pagination || response?.pagination || { total: 0, totalPages: 1 }
+    };
   },
 };

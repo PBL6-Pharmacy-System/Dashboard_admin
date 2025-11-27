@@ -3,7 +3,7 @@ import { Search, Plus, Grid, List, Edit, Trash2, Eye, ChevronDown } from 'lucide
 import { Link, useLocation } from 'react-router-dom';
 import { productService, type Product } from '../services/productService';
 import { categoryService } from '../services/categoryService';
-import { CATEGORY_MENU, type MainMenuKey } from '../constants/categoryMenu';
+import { CATEGORY_MENU, type MainMenuKey, type Subcategory } from '../constants/categoryMenu';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 
 const Products = () => {
@@ -13,7 +13,7 @@ const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedMainMenu, setSelectedMainMenu] = useState<MainMenuKey | ''>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -65,7 +65,7 @@ const Products = () => {
       const fetchCategoryProducts = async () => {
         try {
           setLoading(true);
-          const response = await categoryService.getProductsByCategory(selectedSubcategory);
+          const response = await categoryService.getProductsByCategoryId(selectedSubcategory.id);
           const productsData = response?.products || [];
           setProducts(productsData);
           setCurrentPage(1);
@@ -92,23 +92,23 @@ const Products = () => {
     if (selectedMainMenu === key) {
       setSelectedMainMenu('');
       setSelectedCategory('');
-      setSelectedSubcategory('');
+      setSelectedSubcategory(null);
     } else {
       setSelectedMainMenu(key);
       setSelectedCategory('');
-      setSelectedSubcategory('');
+      setSelectedSubcategory(null);
     }
   };
 
   // Handle category click
   const handleCategoryClick = (categoryTitle: string) => {
     setSelectedCategory(categoryTitle === selectedCategory ? '' : categoryTitle);
-    setSelectedSubcategory('');
+    setSelectedSubcategory(null);
   };
 
   // Handle subcategory click
-  const handleSubcategoryClick = (subcategoryName: string) => {
-    setSelectedSubcategory(subcategoryName);
+  const handleSubcategoryClick = (subcategory: Subcategory) => {
+    setSelectedSubcategory(subcategory);
   };
 
   // Handle delete product
@@ -280,17 +280,17 @@ const Products = () => {
                 {selectedCategoryData.title} - Chọn danh mục con:
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2">
-                {selectedCategoryData.subcategories.map((subcategory, idx) => (
+                {selectedCategoryData.subcategories.map((subcategory) => (
                   <button
-                    key={idx}
+                    key={subcategory.id}
                     onClick={() => handleSubcategoryClick(subcategory)}
                     className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-300 text-center ${
-                      selectedSubcategory === subcategory
+                      selectedSubcategory?.id === subcategory.id
                         ? 'bg-gradient-to-br from-blue-700 via-blue-600 to-blue-700 text-white shadow-xl border-2 border-blue-500'
                         : 'bg-white text-blue-800 hover:bg-blue-100 shadow-md border-2 border-blue-200 hover:border-blue-400'
                     }`}
                   >
-                    {subcategory}
+                    {subcategory.title}
                   </button>
                 ))}
               </div>

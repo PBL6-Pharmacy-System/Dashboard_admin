@@ -1,13 +1,14 @@
 import { 
   LayoutDashboard, 
   Package, 
-  Heart, 
   Inbox, 
-  List, 
-  Archive,
+  ShoppingCart, 
   Users,
   Settings,
-  LogOut
+  LogOut,
+  Warehouse,
+  ClipboardList,
+  TruckIcon
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
@@ -37,14 +38,13 @@ const Sidebar = () => {
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', adminOnly: true },
     { icon: Package, label: 'Products', path: '/dashboard/products', adminOnly: false },
-    { icon: Heart, label: 'Favorites', path: '/dashboard/favorites', adminOnly: false },
     { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox', adminOnly: false },
-    { icon: List, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
-    { icon: Archive, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
-    { icon: List, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
+    { icon: ShoppingCart, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
+    { icon: Warehouse, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
+    { icon: ClipboardList, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
     { icon: Users, label: 'Staff Accounts', path: '/dashboard/staff', adminOnly: true },
     { icon: Users, label: 'Customers', path: '/dashboard/customers', adminOnly: false },
-    { icon: Package, label: 'Stock Transfer', path: '/dashboard/stock-transfer', adminOnly: false },
+    { icon: TruckIcon, label: 'Stock Transfer', path: '/dashboard/stock-transfer', adminOnly: false },
   ];
 
   // Filter menu items based on role
