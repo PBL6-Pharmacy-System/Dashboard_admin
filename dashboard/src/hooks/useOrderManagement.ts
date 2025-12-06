@@ -36,6 +36,52 @@ export const useOrderManagement = () => {
     note: ''
   });
 
+  // Calculate statistics from orders (since API may not return correct data)
+  const calculateStatistics = useCallback((orders: Order[]): OrderStatistics => {
+    const totalOrders = orders.length;
+    const pendingOrders = orders.filter(o => o.status === 'pending').length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
+    
+    // Calculate total revenue from PAID orders only
+    const totalRevenue = orders
+      .filter(order => {
+        // Check if order has at least one paid payment
+        const hasPaidPayment = order.payments && order.payments.some(p => p.status === 'paid');
+        return hasPaidPayment;
+      })
+      .reduce((sum, order) => {
+        return sum + Number(order.final_amount || order.total_amount || 0);
+      }, 0);
+    
+    return {
+      total_orders: totalOrders,
+      pending_orders: pendingOrders,
+      processing_orders: 0,
+      shipped_orders: 0,
+      delivered_orders: deliveredOrders,
+      cancelled_orders: orders.filter(o => o.status === 'cancelled').length,
+      total_revenue: totalRevenue,
+      average_order_value: totalOrders > 0 ? totalRevenue / totalOrders : 0
+    };
+  }, []);
+
+  // Fetch all orders for statistics calculation
+  const fetchAllOrdersForStats = useCallback(async () => {
+    try {
+      console.log('Fetching all orders for statistics...');
+      // Fetch with large limit to get all orders
+      const response = await orderService.getAllOrders(1, 1000);
+      
+      if (response.success && response.data && Array.isArray(response.data.orders)) {
+        const calculatedStats = calculateStatistics(response.data.orders);
+        setStatistics(calculatedStats);
+        console.log('Statistics calculated from all orders:', calculatedStats);
+      }
+    } catch (error) {
+      console.error('Error fetching all orders for stats:', error);
+    }
+  }, [calculateStatistics]);
+
   // Fetch orders from API
   const fetchOrders = useCallback(async (page: number = 1) => {
     setLoading(true);
@@ -49,10 +95,21 @@ export const useOrderManagement = () => {
         setCurrentPage(response.data.pagination.currentPage);
         setTotalPages(response.data.pagination.totalPages);
         setTotalItems(response.data.pagination.totalItems);
+        
         console.log('Orders loaded:', response.data.orders.length);
       } else {
         console.warn('Invalid orders response, setting empty array');
         setOrderList([]);
+        setStatistics({
+          total_orders: 0,
+          pending_orders: 0,
+          processing_orders: 0,
+          shipped_orders: 0,
+          delivered_orders: 0,
+          cancelled_orders: 0,
+          total_revenue: 0,
+          average_order_value: 0
+        });
       }
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -82,8 +139,8 @@ export const useOrderManagement = () => {
   // Load data on mount
   useEffect(() => {
     fetchOrders(1);
-    fetchStatistics();
-  }, [fetchOrders, fetchStatistics]);
+    fetchAllOrdersForStats();
+  }, [fetchOrders, fetchAllOrdersForStats]);
 
   // --- ACTIONS ---
 
@@ -149,6 +206,7 @@ export const useOrderManagement = () => {
         showToast('success', 'Cập nhật đơn hàng thành công');
         setIsUpdateModalOpen(false);
         fetchOrders(currentPage);
+        fetchAllOrdersForStats(); // Refresh statistics
       } else {
         showToast('error', 'Cập nhật đơn hàng thất bại');
       }
@@ -171,6 +229,7 @@ export const useOrderManagement = () => {
       await orderService.cancelOrder(order.id);
       showToast('success', 'Hủy đơn hàng thành công');
       fetchOrders(currentPage);
+      fetchAllOrdersForStats(); // Refresh statistics
     } catch (error) {
       console.error('Error cancelling order:', error);
       showToast('error', 'Không thể hủy đơn hàng');

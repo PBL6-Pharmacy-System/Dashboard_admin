@@ -42,7 +42,11 @@ const Products = () => {
         const response = await productService.getAllProducts(currentPage, PRODUCTS_PER_PAGE);
         console.log('Products response:', response);
         
-        const productsData = response?.products || [];
+        const productsData = (response?.products || []).map((product: Product) => ({
+          ...product,
+          // Ensure images is always an array
+          images: Array.isArray(product.images) ? product.images : (product.image_url ? [product.image_url] : [])
+        }));
         setProducts(productsData);
         setTotalProducts(response?.pagination?.total || productsData.length);
         setTotalPages(response?.pagination?.totalPages || Math.ceil((response?.pagination?.total || productsData.length) / PRODUCTS_PER_PAGE));
@@ -66,7 +70,11 @@ const Products = () => {
         try {
           setLoading(true);
           const response = await categoryService.getProductsByCategoryId(selectedSubcategory.id);
-          const productsData = response?.products || [];
+          const productsData = (response?.products || []).map((product: Product) => ({
+            ...product,
+            // Ensure images is always an array
+            images: Array.isArray(product.images) ? product.images : (product.image_url ? [product.image_url] : [])
+          }));
           setProducts(productsData);
           setCurrentPage(1);
           setTotalProducts(productsData.length);
@@ -299,13 +307,6 @@ const Products = () => {
         </div>
       )}
 
-      {/* Loading State */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-gradient-to-br from-blue-50 to-white rounded-2xl shadow-lg border-2 border-blue-200">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-          <p className="text-blue-600 font-bold text-lg">Đang tải sản phẩm...</p>
-        </div>
-      )}
 
       {/* Error State */}
       {error && (
@@ -333,7 +334,7 @@ const Products = () => {
                 {/* Product Image */}
                 <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
                   <img
-                    src={product.images[0] || 'https://via.placeholder.com/400'}
+                    src={product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/400'}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
@@ -469,7 +470,7 @@ const Products = () => {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
                       <img
-                        src={product.images[0] || 'https://via.placeholder.com/64'}
+                        src={product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/64'}
                         alt={product.name}
                         className="w-20 h-20 rounded-xl object-cover shadow-md border-2 border-blue-200"
                       />
@@ -486,9 +487,9 @@ const Products = () => {
                   </td>
                   <td className="py-4 px-6">
                     <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${
-                      product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      (product.in_stock || product.stock || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
-                      {product.stock}
+                      {product.in_stock || product.stock || 0}
                     </span>
                   </td>
                   <td className="py-4 px-6">

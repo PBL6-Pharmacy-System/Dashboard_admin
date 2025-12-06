@@ -6,6 +6,8 @@ import type {
   OverviewData,
   ReviewData,
   ActivityData,
+  AnalyticsInsight,
+  Branch,
 } from '../types/dashboard.types';
 
 export interface DashboardContextType {
@@ -15,6 +17,11 @@ export interface DashboardContextType {
     endDate: string;
   };
   setDateRange: (range: { startDate: string; endDate: string }) => void;
+  
+  // Branch filter
+  selectedBranch: number | null;
+  setSelectedBranch: (branchId: number | null) => void;
+  branches: Branch[];
   
   // Dashboard data
   overview: OverviewData | null;
@@ -27,6 +34,7 @@ export interface DashboardContextType {
   reviews: ReviewData[];
   reviewsTotal: number;
   activities: ActivityData[];
+  analytics: AnalyticsInsight[];
   
   // Loading states
   loading: {
@@ -36,6 +44,8 @@ export interface DashboardContextType {
     ordersStats: boolean;
     reviews: boolean;
     activities: boolean;
+    analytics: boolean;
+    branches: boolean;
   };
   
   // Error states
@@ -46,6 +56,8 @@ export interface DashboardContextType {
     ordersStats: string | null;
     reviews: string | null;
     activities: string | null;
+    analytics: string | null;
+    branches: string | null;
   };
   
   // Refresh function

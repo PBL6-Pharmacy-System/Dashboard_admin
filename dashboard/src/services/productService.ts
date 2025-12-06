@@ -5,7 +5,8 @@ export interface Product {
   name: string;
   description: string;
   price: string;
-  stock: number;
+  stock?: number;
+  in_stock?: number;
   category_id: number | null;
   supplier_id: number | null;
   image_url: string | null;
@@ -13,8 +14,8 @@ export interface Product {
   created_at: string;
   updated_at: string;
   tax_fee: string;
-  base_unit_id: number;
-  images: string[];
+  base_unit_id: number | null;
+  images: string[] | null;
   manufacturer: string | null;
   usage: string | null;
   dosage: string | null;
@@ -47,7 +48,9 @@ export interface Product {
   unittype: {
     id: number;
     name: string;
-  };
+  } | null;
+  sold_count?: number;
+  productunits?: Array<any>;
 }
 
 export interface ProductsResponse {
@@ -129,7 +132,16 @@ export const productService = {
   },
 
   async getProductById(id: number): Promise<Product> {
-    return api.get(`/products/${id}`);
+    const response = await api.get(`/products/${id}`);
+    console.log('Raw product detail response:', response);
+    
+    // Handle { success: true, data: {...} } structure
+    if (response?.data) {
+      return response.data;
+    }
+    
+    // If response is directly the product object
+    return response;
   },
 
   async createProduct(product: CreateProductRequest): Promise<CreateProductResponse> {

@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, getAIBaseURL } from './api';
 import type {
   RevenueResponse,
   TopProductsResponse,
@@ -9,6 +9,8 @@ import type {
   PromotionsStatsResponse,
   ReviewsStatsResponse,
   RecentActivitiesResponse,
+  AnalyticsResponse,
+  Branch,
 } from '../types/dashboard.types';
 
 export const dashboardService = {
@@ -80,5 +82,19 @@ export const dashboardService = {
   // 9. Lấy các hoạt động gần đây
   async getRecentActivities(limit: number = 10): Promise<RecentActivitiesResponse> {
     return api.get(`/admin/dashboard/recent-activities?limit=${limit}`);
+  },
+
+  // 10. Lấy analytics insights từ AI
+  async getAnalytics(branchId?: number): Promise<AnalyticsResponse> {
+    const params = branchId ? `?branch_id=${branchId}` : '';
+    return api.get(`/api/admin/analytics${params}`, getAIBaseURL());
+  },
+
+  // 11. Lấy danh sách tất cả chi nhánh (sử dụng branch-sales API)
+  async getAllBranches(): Promise<{ success: boolean; data: any[] }> {
+    // Sử dụng API branch-sales với range 1 năm để lấy tất cả branches
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0];
+    return this.getBranchSales(startDate, endDate);
   },
 };

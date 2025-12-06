@@ -281,3 +281,26 @@ export interface RecentActivitiesResponse {
     activities: ActivityData[];
   };
 }
+
+// 10. Analytics API Response (AI Insights)
+export interface AnalyticsInsight {
+  type: string;
+  message: string;
+  severity?: 'info' | 'warning' | 'success' | 'error';
+  data?: any;
+}
+
+export interface AnalyticsResponse {
+  success: boolean;
+  data: {
+    insights: AnalyticsInsight[];
+    summary?: string;
+  };
+}
+
+// Branch type
+export interface Branch {
+  branch_id: number;
+  name: string;
+  address?: string;
+}

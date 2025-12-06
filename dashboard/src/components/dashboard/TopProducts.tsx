@@ -10,6 +10,35 @@ const LOW_COLORS = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D'];
 const formatCurrency = (value: number) => 
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value);
 
+// Hàm cắt ngắn tên sản phẩm
+const truncateText = (text: string, maxLength: number = 25) => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
+// Custom YAxis tick để hiển thị tên ngắn gọn hơn
+const CustomYAxisTick = (props: any) => {
+  const { x, y, payload } = props;
+  const shortName = truncateText(payload.value, 25);
+  
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="end"
+        fill="#4B5563"
+        fontSize="11"
+        fontWeight="500"
+        title={payload.value}
+      >
+        {shortName}
+      </text>
+    </g>
+  );
+};
+
 const TopProducts: FC = () => {
   const { topProducts, loading, errors, dateRange } = useDashboard();
   const [activeTab, setActiveTab] = useState<'top' | 'low'>('top');
@@ -82,26 +111,48 @@ const TopProducts: FC = () => {
       ) : (
         <div className="flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={currentData} layout="vertical" margin={{ left: 0, right: 20 }}>
+            <BarChart 
+              data={currentData} 
+              layout="vertical" 
+              margin={{ left: 10, right: 20, top: 10, bottom: 10 }}
+            >
               <XAxis type="number" hide />
               <YAxis 
                 dataKey="name" 
                 type="category" 
                 axisLine={false} 
                 tickLine={false}
-                width={100}
-                tick={{ fontSize: 11, fill: '#4B5563', fontWeight: 500 }}
+                width={150}
+                tick={<CustomYAxisTick />}
               />
               <Tooltip 
                 cursor={{ fill: '#F9FAFB' }}
-                formatter={(val: number, name: string) => {
-                  if (name === 'sales') return [`${val} sp`, 'Đã bán'];
-                  if (name === 'amount') return [`${formatCurrency(val)}đ`, 'Doanh thu'];
-                  return [val, name];
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+                        <p className="font-semibold text-gray-900 text-sm mb-2">{data.name}</p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-gray-600">
+                            <span className="font-medium">Đã bán:</span> {data.sales} sản phẩm
+                          </p>
+                          <p className="text-xs text-gray-600">
+                            <span className="font-medium">Doanh thu:</span> {formatCurrency(data.amount)}đ
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
                 }}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
               />
-              <Bar dataKey="sales" radius={[0, 4, 4, 0]} barSize={20} background={{ fill: '#F3F4F6' }}>
+              <Bar 
+                dataKey="sales" 
+                radius={[0, 4, 4, 0]} 
+                barSize={18} 
+                background={{ fill: '#F3F4F6' }}
+              >
                 {currentData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={currentColors[index % currentColors.length]} />
                 ))}

@@ -40,8 +40,19 @@ const ProductDetail = () => {
       setLoading(true);
       setError(null);
       const data = await productService.getProductById(parseInt(productId));
-      setProduct(data);
-      setSelectedImage(data.images[0] || 'https://via.placeholder.com/600');
+      
+      // Normalize images array if needed
+      const normalizedData: Product = {
+        ...data,
+        images: Array.isArray(data.images) ? data.images : (data.image_url ? [data.image_url] : [])
+      };
+      
+      setProduct(normalizedData);
+      setSelectedImage(
+        normalizedData.images && normalizedData.images.length > 0 
+          ? normalizedData.images[0] 
+          : 'https://via.placeholder.com/600'
+      );
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể tải thông tin sản phẩm';
       setError(errorMessage);
@@ -76,7 +87,6 @@ const ProductDetail = () => {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-lg border-2 border-blue-200">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-            <p className="text-blue-600 font-bold text-lg">Đang tải thông tin sản phẩm...</p>
           </div>
         </div>
       </div>
@@ -113,7 +123,7 @@ const ProductDetail = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <button
-              onClick={() => navigate('/products')}
+              onClick={() => navigate('/dashboard/products')}
               className="p-3 bg-white hover:bg-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border-2 border-blue-200"
             >
               <ArrowLeft size={20} className="text-blue-600" />
@@ -159,7 +169,7 @@ const ProductDetail = () => {
               </div>
               
               {/* Thumbnail Images */}
-              {product.images.length > 1 && (
+              {product.images && product.images.length > 1 && (
                 <div className="p-4 bg-gray-50 border-t-2 border-blue-100">
                   <div className="grid grid-cols-4 gap-2">
                     {product.images.map((img, index) => (
@@ -193,7 +203,7 @@ const ProductDetail = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b border-blue-400">
                   <span className="text-blue-100">Tồn kho:</span>
-                  <span className="font-bold text-lg">{product.stock} {product.unittype?.name || 'đơn vị'}</span>
+                  <span className="font-bold text-lg">{product.in_stock || product.stock || 0} {product.unittype?.name || 'đơn vị'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-blue-400">
                   <span className="text-blue-100">Giá bán:</span>
@@ -284,13 +294,13 @@ const ProductDetail = () => {
                 {product.usage && (
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Công dụng:</h4>
-                    <p className="text-gray-600 bg-green-50 p-3 rounded-lg">{product.usage}</p>
+                    <div className="text-gray-600 bg-green-50 p-3 rounded-lg prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.usage }} />
                   </div>
                 )}
                 {product.dosage && (
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-2">Liều lượng:</h4>
-                    <p className="text-gray-600 bg-blue-50 p-3 rounded-lg">{product.dosage}</p>
+                    <div className="text-gray-600 bg-blue-50 p-3 rounded-lg prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.dosage }} />
                   </div>
                 )}
                 {product.adverseEffect && (
@@ -299,7 +309,7 @@ const ProductDetail = () => {
                       <AlertCircle className="text-red-600" size={18} />
                       Tác dụng phụ:
                     </h4>
-                    <p className="text-gray-600 bg-red-50 p-3 rounded-lg border-l-4 border-red-500">{product.adverseEffect}</p>
+                    <div className="text-gray-600 bg-red-50 p-3 rounded-lg border-l-4 border-red-500 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: product.adverseEffect }} />
                   </div>
                 )}
               </div>
@@ -312,7 +322,18 @@ const ProductDetail = () => {
                   <FileText className="text-purple-600" size={24} />
                   Tuyên bố pháp lý
                 </h3>
-                <p className="text-gray-600 bg-purple-50 p-4 rounded-lg leading-relaxed">{product.legalDeclaration}</p>
+                {product.legalDeclaration.startsWith('http') ? (
+                  <a 
+                    href={product.legalDeclaration} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                  >
+                    📄 Xem Giấy công bố
+                  </a>
+                ) : (
+                  <p className="text-gray-600 bg-purple-50 p-4 rounded-lg leading-relaxed">{product.legalDeclaration}</p>
+                )}
               </div>
             )}
 

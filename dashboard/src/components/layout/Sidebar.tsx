@@ -8,7 +8,13 @@ import {
   LogOut,
   Warehouse,
   ClipboardList,
-  TruckIcon
+  TruckIcon,
+  MapPin,
+  PackageSearch,
+  FileText,
+  BarChart3,
+  ShoppingBag,
+  UserCog
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
@@ -42,9 +48,14 @@ const Sidebar = () => {
     { icon: ShoppingCart, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
     { icon: Warehouse, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
     { icon: ClipboardList, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
-    { icon: Users, label: 'Staff Accounts', path: '/dashboard/staff', adminOnly: true },
-    { icon: Users, label: 'Customers', path: '/dashboard/customers', adminOnly: false },
+    { icon: MapPin, label: 'Branches', path: '/dashboard/branches', adminOnly: false },
+    { icon: PackageSearch, label: 'Batches', path: '/dashboard/batches', adminOnly: false },
+    { icon: ShoppingBag, label: 'Supplier Orders', path: '/dashboard/supplier-orders', adminOnly: false },
+    { icon: FileText, label: 'Stock Takes', path: '/dashboard/stock-takes', adminOnly: false },
     { icon: TruckIcon, label: 'Stock Transfer', path: '/dashboard/stock-transfer', adminOnly: false },
+    { icon: BarChart3, label: 'Inventory Reports', path: '/dashboard/inventory-reports', adminOnly: false },
+    { icon: UserCog, label: 'Staff Accounts', path: '/dashboard/staff', adminOnly: true },
+    { icon: Users, label: 'Customers', path: '/dashboard/customers', adminOnly: true },
   ];
 
   // Filter menu items based on role
@@ -60,57 +71,50 @@ const Sidebar = () => {
 
 
   return (
-    <aside className="w-64 bg-gradient-to-b from-white to-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0 shadow-lg">
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
       {/* Logo */}
-      <div className="h-16 px-6 flex items-center border-b border-gray-200 flex-shrink-0 bg-white">
+      <div className="h-16 px-6 flex items-center border-b border-gray-200 flex-shrink-0">
         <h1 className="text-2xl font-bold">
-          <span className="bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">Long</span>
-          <span className="bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Châu</span>
+          <span className="text-blue-600">Long</span>
+          <span className="text-gray-800">Châu</span>
         </h1>
       </div>
 
       {/* Menu Items */}
-      <nav className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-        <div className="space-y-1.5">
+      <nav className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-1">
           {menuItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end
               className={({ isActive }) =>
-                `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 relative overflow-hidden ${
+                `flex items-center gap-3 px-4 py-2.5 rounded-lg ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30'
-                    : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent animate-shimmer"></div>
-                  )}
-                  <item.icon size={20} className={`flex-shrink-0 ${isActive ? 'drop-shadow-sm' : 'group-hover:scale-110 transition-transform'}`} />
-                  <span className="text-sm font-semibold relative z-10">{item.label}</span>
-                </>
-              )}
+              <item.icon size={20} />
+              <span className="text-sm font-medium">{item.label}</span>
             </NavLink>
           ))}
         </div>
       </nav>
 
       {/* Bottom Actions */}
-      <div className="p-4 border-t border-gray-200 bg-gradient-to-t from-gray-50 to-white space-y-2 flex-shrink-0">
-        <button className="group flex items-center gap-3 px-4 py-3 w-full text-gray-600 hover:bg-white hover:text-blue-600 rounded-xl transition-all duration-200 hover:shadow-sm">
-          <Settings size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-          <span className="text-sm font-semibold">Settings</span>
+      <div className="p-4 border-t border-gray-200 space-y-1">
+        <button className="flex items-center gap-3 px-4 py-2.5 w-full text-gray-600 rounded-lg hover:bg-gray-100">
+          <Settings size={20} />
+          <span className="text-sm font-medium">Settings</span>
         </button>
         <button 
           onClick={handleLogout}
-          className="group flex items-center gap-3 px-4 py-3 w-full text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-xl transition-all duration-200 hover:shadow-sm"
+          className="flex items-center gap-3 px-4 py-2.5 w-full text-gray-600 rounded-lg hover:bg-gray-100"
         >
-          <LogOut size={20} className="group-hover:translate-x-1 transition-transform duration-200" />
-          <span className="text-sm font-semibold">Logout</span>
+          <LogOut size={20} />
+          <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
     </aside>

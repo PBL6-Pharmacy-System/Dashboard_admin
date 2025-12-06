@@ -16,64 +16,70 @@ import StaffAccounts from './pages/StaffAccounts';
 import Customers from './pages/Customers';
 import StockSlips from './pages/StockSlips';
 import StockTransfer from './pages/StockTransfer';
+import Branches from './pages/Branches';
+import Batches from './pages/Batches';
+import SupplierOrders from './pages/SupplierOrders';
+import StockTakes from './pages/StockTakes';
+import InventoryReports from './pages/InventoryReports';
 import Toast from './components/common/Toast';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import { useToast } from './hooks/useToast';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { useEffect, useState } from 'react';
 
-// Protected Route Component
+// Protected Route Component - DISABLED FOR DEVELOPMENT (no login required)
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+    const isAuthenticated = authService.isAuthenticated();
+    
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
   
   return <>{children}</>;
 };
 
-// Admin Only Route Component
+// Admin Only Route Component - DISABLED FOR DEVELOPMENT
 const AdminOnlyRoute = ({ children }: { children: React.ReactNode }) => {
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  
-  useEffect(() => {
-    const checkRole = async () => {
-      const user = await authService.getCurrentUser();
-      
-      if (user) {
-        setUserRole(user.role_name);
-      } else {
-        setUserRole(null);
-      }
-      setLoading(false);
-    };
-    checkRole();
-  }, []);
+    const [userRole, setUserRole] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    
+    useEffect(() => {
+      const checkRole = async () => {
+        const user = await authService.getCurrentUser();
+        
+        if (user) {
+          setUserRole(user.role_name);
+        } else {
+          setUserRole(null);
+        }
+        setLoading(false);
+      };
+      checkRole();
+    }, []);
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-    </div>;
-  }
+    if (loading) {
+      return <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>;
+    }
 
-  const isAdmin = userRole?.toLowerCase() === 'admin';
-  
-  if (!isAdmin) {
-    return <Navigate to="/dashboard/products" replace />;
-  }
-  
+    const isAdmin = userRole?.toLowerCase() === 'admin';
+    
+    if (!isAdmin) {
+      return <Navigate to="/dashboard/products" replace />;
+    }
+    
   return <>{children}</>;
 };
 
-// Public Route Component (redirect to dashboard if already logged in)
+// Public Route Component (redirect to dashboard if already logged in) - DISABLED FOR DEVELOPMENT
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = authService.isAuthenticated();
-  
-  if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
-  }
-  
+    const isAuthenticated = authService.isAuthenticated();
+    
+    if (isAuthenticated) {
+      return <Navigate to="/dashboard" replace />;
+    }
+    
   return <>{children}</>;
 };
 
@@ -97,24 +103,28 @@ function App() {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         
-        {/* Root redirects to login */}
+        {/* Root redirects to dashboard - CHANGED FOR DEVELOPMENT */}
         <Route path="/" element={<Navigate to="/login" replace />} />
         
         {/* Protected Dashboard Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardProvider><Layout /></DashboardProvider></ProtectedRoute>}>
           <Route index element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
-          <Route path="products" element={<Products />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="products/edit/:id" element={<AddProduct />} />
-          <Route path="products/detail/:id" element={<ProductDetail />} />
-          <Route path="inbox" element={<Inbox />} />
-          <Route path="orders" element={<OrderList />} />
-          <Route path="stock" element={<ProductStock />} />
-          <Route path="stock-slips" element={<StockSlips />} />
-          <Route path="staff" element={<AdminOnlyRoute><StaffAccounts /></AdminOnlyRoute>} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="stock-transfer" element={<StockTransfer />} />
-
+          <Route path="products" element={<ErrorBoundary><Products /></ErrorBoundary>} />
+          <Route path="products/add" element={<ErrorBoundary><AddProduct /></ErrorBoundary>} />
+          <Route path="products/edit/:id" element={<ErrorBoundary><AddProduct /></ErrorBoundary>} />
+          <Route path="products/detail/:id" element={<ErrorBoundary><ProductDetail /></ErrorBoundary>} />
+          <Route path="inbox" element={<ErrorBoundary><Inbox /></ErrorBoundary>} />
+          <Route path="orders" element={<ErrorBoundary><OrderList /></ErrorBoundary>} />
+          <Route path="stock" element={<ErrorBoundary><ProductStock /></ErrorBoundary>} />
+          <Route path="stock-slips" element={<ErrorBoundary><StockSlips /></ErrorBoundary>} />
+          <Route path="staff" element={<AdminOnlyRoute><ErrorBoundary><StaffAccounts /></ErrorBoundary></AdminOnlyRoute>} />
+          <Route path="customers" element={<AdminOnlyRoute><ErrorBoundary><Customers /></ErrorBoundary></AdminOnlyRoute>} />
+          <Route path="stock-transfer" element={<ErrorBoundary><StockTransfer /></ErrorBoundary>} />
+          <Route path="branches" element={<ErrorBoundary><Branches /></ErrorBoundary>} />
+          <Route path="batches" element={<ErrorBoundary><Batches /></ErrorBoundary>} />
+          <Route path="supplier-orders" element={<ErrorBoundary><SupplierOrders /></ErrorBoundary>} />
+          <Route path="stock-takes" element={<ErrorBoundary><StockTakes /></ErrorBoundary>} />
+          <Route path="inventory-reports" element={<ErrorBoundary><InventoryReports /></ErrorBoundary>} />
         </Route>
 
         {/* 404 Route */}

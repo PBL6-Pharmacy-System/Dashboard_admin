@@ -1,0 +1,262 @@
+import { useState, useEffect } from 'react';
+import { Plus, Search, Eye, X, CheckCircle, XCircle, TruckIcon } from 'lucide-react';
+import { supplierOrderService, type SupplierOrder } from '../services/supplierOrderService';
+
+const SupplierOrders = () => {
+  const [orders, setOrders] = useState<SupplierOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedStatus, setSelectedStatus] = useState<string>('');
+
+  useEffect(() => {
+    loadOrders();
+  }, [selectedStatus]);
+
+  const loadOrders = async () => {
+    try {
+      setLoading(true);
+      const params: any = {};
+      if (selectedStatus) params.status = selectedStatus;
+      
+      console.log('🔄 Fetching supplier orders with params:', params);
+      const response = await supplierOrderService.getAllOrders(params);
+      console.log('✅ Supplier orders response:', response);
+      
+      // Check if backend returned error
+      if (response.success === false) {
+        console.error('❌ Backend error:', response.error);
+        alert(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách đơn hàng'}`);
+        setOrders([]);
+        return;
+      }
+      
+      // Handle different response structures
+      let ordersData = [];
+      if (Array.isArray(response.data)) {
+        ordersData = response.data;
+      } else if (response.data && Array.isArray(response.data.orders)) {
+        ordersData = response.data.orders;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        ordersData = response.data.data;
+      }
+      
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('❌ Error loading supplier orders:', error);
+      // Set empty array on error so UI doesn't break
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id: number, status: string) => {
+    if (confirm(`Xác nhận cập nhật trạng thái đơn thành "${status}"?`)) {
+      try {
+        await supplierOrderService.updateOrderStatus(id, status);
+        loadOrders();
+      } catch (error) {
+        console.error('Error updating order status:', error);
+      }
+    }
+  };
+
+  const handleCancelOrder = async (id: number) => {
+    const reason = prompt('Nhập lý do hủy đơn:');
+    if (reason) {
+      try {
+        await supplierOrderService.cancelOrder(id, reason);
+        loadOrders();
+      } catch (error) {
+        console.error('Error cancelling order:', error);
+      }
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      approved: 'bg-blue-100 text-blue-800',
+      shipped: 'bg-purple-100 text-purple-800',
+      received: 'bg-green-100 text-green-800',
+      cancelled: 'bg-red-100 text-red-800'
+    };
+    return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: 'Chờ duyệt',
+      approved: 'Đã duyệt',
+      shipped: 'Đang vận chuyển',
+      received: 'Đã nhận',
+      cancelled: 'Đã hủy'
+    };
+    return labels[status] || status;
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
+  return (
+    <div className="p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Đơn đặt hàng Nhà cung cấp</h1>
+        <p className="text-gray-600 mt-1">Quản lý đơn đặt hàng từ nhà cung cấp</p>
+      </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Tất cả trạng thái</option>
+                <option value="pending">Chờ duyệt</option>
+                <option value="approved">Đã duyệt</option>
+                <option value="shipped">Đang vận chuyển</option>
+                <option value="received">Đã nhận</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+            <button
+              onClick={() => window.location.href = '/dashboard/supplier-orders/create'}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus size={20} />
+              Tạo đơn mới
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Mã đơn
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    NCC
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Chi nhánh
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Tổng tiền
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Trạng thái
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    Ngày tạo
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <span className="font-medium text-gray-900">{order.order_number}</span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Supplier #{order.supplier_id}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      Branch #{order.branch_id}
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-gray-900">
+                      {formatCurrency(order.total_amount)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
+                        {getStatusLabel(order.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      {new Date(order.created_at).toLocaleDateString('vi-VN')}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => window.location.href = `/dashboard/supplier-orders/${order.id}`}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                          title="Chi tiết"
+                        >
+                          <Eye size={18} />
+                        </button>
+                        
+                        {order.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'approved')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded"
+                            title="Duyệt đơn"
+                          >
+                            <CheckCircle size={18} />
+                          </button>
+                        )}
+                        
+                        {order.status === 'approved' && (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'shipped')}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded"
+                            title="Đánh dấu đang vận chuyển"
+                          >
+                            <TruckIcon size={18} />
+                          </button>
+                        )}
+                        
+                        {order.status === 'shipped' && (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'received')}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded"
+                            title="Xác nhận đã nhận"
+                          >
+                            <CheckCircle size={18} />
+                          </button>
+                        )}
+                        
+                        {['pending', 'approved'].includes(order.status) && (
+                          <button
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded"
+                            title="Hủy đơn"
+                          >
+                            <XCircle size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {orders.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      Không tìm thấy đơn hàng nào
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SupplierOrders;
