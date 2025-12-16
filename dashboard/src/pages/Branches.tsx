@@ -9,7 +9,6 @@ const Branches = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [formData, setFormData] = useState({
-    branch_name: '',
     address: '',
     phone: '',
     is_active: true
@@ -69,7 +68,6 @@ const Branches = () => {
     if (branch) {
       setSelectedBranch(branch);
       setFormData({
-        branch_name: branch.branch_name,
         address: branch.address,
         phone: branch.phone,
         is_active: branch.is_active
@@ -77,7 +75,6 @@ const Branches = () => {
     } else {
       setSelectedBranch(null);
       setFormData({
-        branch_name: '',
         address: '',
         phone: '',
         is_active: true
@@ -166,9 +163,6 @@ const Branches = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Tên chi nhánh
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                     Địa chỉ
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -185,9 +179,6 @@ const Branches = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {branches.map((branch) => (
                   <tr key={branch.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{branch.branch_name}</div>
-                    </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin size={16} />
@@ -240,7 +231,7 @@ const Branches = () => {
                 ))}
                 {branches.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
                       Không tìm thấy chi nhánh nào
                     </td>
                   </tr>
@@ -253,25 +244,13 @@ const Branches = () => {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-opacity-20 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl">
             <h2 className="text-xl font-bold mb-4">
               {selectedBranch ? 'Cập nhật chi nhánh' : 'Thêm chi nhánh mới'}
             </h2>
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tên chi nhánh <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.branch_name}
-                    onChange={(e) => setFormData({ ...formData, branch_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Địa chỉ <span className="text-red-500">*</span>

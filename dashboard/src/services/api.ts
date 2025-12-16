@@ -1,7 +1,7 @@
 import { showGlobalToast } from '../hooks/useToast';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
-const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'https://unendowed-placably-aviana.ngrok-free.dev';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ;
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL ;
 
 const getHeaders = (baseUrl?: string) => {
   const headers: Record<string, string> = {

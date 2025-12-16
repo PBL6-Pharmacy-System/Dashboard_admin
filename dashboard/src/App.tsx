@@ -4,7 +4,7 @@ import Layout from './components/layout/Layout';
 import Products from './pages/Products';
 import AddProduct from './pages/AddProduct';
 import ProductDetail from './pages/ProductDetail';
-import Inbox from './pages/Inbox';
+// import Inbox from './pages/Inbox';
 import OrderList from './pages/OrderList';
 import ProductStock from './pages/ProductStock';
 import Login from './pages/Login';
@@ -21,6 +21,7 @@ import Batches from './pages/Batches';
 import SupplierOrders from './pages/SupplierOrders';
 import StockTakes from './pages/StockTakes';
 import InventoryReports from './pages/InventoryReports';
+import FlashSale from './pages/FlashSale';
 import Toast from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import { useToast } from './hooks/useToast';
@@ -113,7 +114,7 @@ function App() {
           <Route path="products/add" element={<ErrorBoundary><AddProduct /></ErrorBoundary>} />
           <Route path="products/edit/:id" element={<ErrorBoundary><AddProduct /></ErrorBoundary>} />
           <Route path="products/detail/:id" element={<ErrorBoundary><ProductDetail /></ErrorBoundary>} />
-          <Route path="inbox" element={<ErrorBoundary><Inbox /></ErrorBoundary>} />
+          {/* <Route path="inbox" element={<ErrorBoundary><Inbox /></ErrorBoundary>} /> */}
           <Route path="orders" element={<ErrorBoundary><OrderList /></ErrorBoundary>} />
           <Route path="stock" element={<ErrorBoundary><ProductStock /></ErrorBoundary>} />
           <Route path="stock-slips" element={<ErrorBoundary><StockSlips /></ErrorBoundary>} />
@@ -125,6 +126,7 @@ function App() {
           <Route path="supplier-orders" element={<ErrorBoundary><SupplierOrders /></ErrorBoundary>} />
           <Route path="stock-takes" element={<ErrorBoundary><StockTakes /></ErrorBoundary>} />
           <Route path="inventory-reports" element={<ErrorBoundary><InventoryReports /></ErrorBoundary>} />
+          <Route path="flash-sale" element={<ErrorBoundary><FlashSale /></ErrorBoundary>} />
         </Route>
 
         {/* 404 Route */}

@@ -1,7 +1,7 @@
 import { 
   LayoutDashboard, 
   Package, 
-  Inbox, 
+  // Inbox, 
   ShoppingCart, 
   Users,
   Settings,
@@ -14,7 +14,8 @@ import {
   FileText,
   BarChart3,
   ShoppingBag,
-  UserCog
+  UserCog,
+  Zap
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
@@ -44,8 +45,9 @@ const Sidebar = () => {
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', adminOnly: true },
     { icon: Package, label: 'Products', path: '/dashboard/products', adminOnly: false },
-    { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox', adminOnly: false },
+    // { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox', adminOnly: false },
     { icon: ShoppingCart, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
+    { icon: Zap, label: 'Flash Sales', path: '/dashboard/flash-sale', adminOnly: false },
     { icon: Warehouse, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
     { icon: ClipboardList, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
     { icon: MapPin, label: 'Branches', path: '/dashboard/branches', adminOnly: false },
