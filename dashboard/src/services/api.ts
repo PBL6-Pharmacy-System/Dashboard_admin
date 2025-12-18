@@ -1,7 +1,10 @@
 import { showGlobalToast } from '../hooks/useToast';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ;
-const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL ;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL;
+
+// Global flag to prevent multiple simultaneous redirects
+let isRedirecting = false;
 
 const getHeaders = (baseUrl?: string) => {
   const headers: Record<string, string> = {
@@ -13,7 +16,8 @@ const getHeaders = (baseUrl?: string) => {
     headers['ngrok-skip-browser-warning'] = 'true';
   }
   
-  const token = sessionStorage.getItem('accessToken');
+  // Get token from localStorage (persistent across page reloads)
+  const token = localStorage.getItem('accessToken');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -22,10 +26,20 @@ const getHeaders = (baseUrl?: string) => {
 };
 
 const handleUnauthorized = () => {
-  // Clear auth data
-  sessionStorage.removeItem('accessToken');
-  sessionStorage.removeItem('refreshToken');
-  sessionStorage.removeItem('user');
+  // Prevent multiple simultaneous redirects
+  if (isRedirecting) {
+    console.log('Redirect already in progress, skipping...');
+    return;
+  }
+  
+  isRedirecting = true;
+  console.warn('🚨 Authentication failed - clearing session and redirecting');
+  
+  // Clear auth data from both localStorage and sessionStorage
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  sessionStorage.clear();
   
   // Show toast notification
   showGlobalToast('error', 'Phiên đăng nhập hết hạn', 'Vui lòng đăng nhập lại để tiếp tục');
@@ -43,9 +57,14 @@ const handleResponse = async (response: Response, endpoint: string) => {
   // BUT skip for login/register endpoints (they return 401 for wrong credentials)
   if ((response.status === 401 || response.status === 403) && 
       !endpoint.includes('/auth/login') && 
-      !endpoint.includes('/auth/register')) {
-    console.warn('Authentication failed, redirecting to login...');
-    handleUnauthorized();
+      !endpoint.includes('/auth/register') &&
+      !endpoint.includes('/auth/logout')) {
+    
+    // Only trigger redirect once, even if multiple API calls fail
+    if (!isRedirecting) {
+      console.warn('⚠️ Authentication failed on endpoint:', endpoint);
+      handleUnauthorized();
+    }
     throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
   }
   

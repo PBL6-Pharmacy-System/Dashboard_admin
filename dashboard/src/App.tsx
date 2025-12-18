@@ -16,10 +16,13 @@ import StaffAccounts from './pages/StaffAccounts';
 import Customers from './pages/Customers';
 import StockSlips from './pages/StockSlips';
 import StockTransfer from './pages/StockTransfer';
+import CreateStockTransfer from './pages/CreateStockTransfer';
 import Branches from './pages/Branches';
 import Batches from './pages/Batches';
 import SupplierOrders from './pages/SupplierOrders';
+import CreateSupplierOrder from './pages/CreateSupplierOrder';
 import StockTakes from './pages/StockTakes';
+import CreateStockTake from './pages/CreateStockTake';
 import InventoryReports from './pages/InventoryReports';
 import FlashSale from './pages/FlashSale';
 import Toast from './components/common/Toast';
@@ -121,10 +124,13 @@ function App() {
           <Route path="staff" element={<AdminOnlyRoute><ErrorBoundary><StaffAccounts /></ErrorBoundary></AdminOnlyRoute>} />
           <Route path="customers" element={<AdminOnlyRoute><ErrorBoundary><Customers /></ErrorBoundary></AdminOnlyRoute>} />
           <Route path="stock-transfer" element={<ErrorBoundary><StockTransfer /></ErrorBoundary>} />
+          <Route path="stock-transfer/create" element={<ErrorBoundary><CreateStockTransfer /></ErrorBoundary>} />
           <Route path="branches" element={<ErrorBoundary><Branches /></ErrorBoundary>} />
           <Route path="batches" element={<ErrorBoundary><Batches /></ErrorBoundary>} />
           <Route path="supplier-orders" element={<ErrorBoundary><SupplierOrders /></ErrorBoundary>} />
+          <Route path="supplier-orders/create" element={<ErrorBoundary><CreateSupplierOrder /></ErrorBoundary>} />
           <Route path="stock-takes" element={<ErrorBoundary><StockTakes /></ErrorBoundary>} />
+          <Route path="stock-takes/create" element={<ErrorBoundary><CreateStockTake /></ErrorBoundary>} />
           <Route path="inventory-reports" element={<ErrorBoundary><InventoryReports /></ErrorBoundary>} />
           <Route path="flash-sale" element={<ErrorBoundary><FlashSale /></ErrorBoundary>} />
         </Route>

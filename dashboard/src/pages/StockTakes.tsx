@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Eye, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Eye, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { stockTakeService, type StockTake } from '../services/stockTakeService';
 import { branchService } from '../services/branchService';
 
 const StockTakes = () => {
+  const navigate = useNavigate();
   const [stockTakes, setStockTakes] = useState<StockTake[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,9 +25,16 @@ const StockTakes = () => {
       const response = await branchService.getAllBranches({ active: true });
       console.log('Branch API response:', response);
       // Handle both response.data array or response.data.branches array
-      const branchesData = Array.isArray(response.data) 
+      let branchesData = Array.isArray(response.data) 
         ? response.data 
         : (response.data?.branches || []);
+      
+      // Normalize branch data to ensure consistent field names
+      branchesData = branchesData.map((branch: any) => ({
+        ...branch,
+        branch_name: branch.name || branch.branch_name || `Chi nhánh ${branch.id}`
+      }));
+      
       setBranches(branchesData);
     } catch (error) {
       console.error('Error loading branches:', error);
@@ -156,7 +165,7 @@ const StockTakes = () => {
               </select>
             </div>
             <button
-              onClick={() => window.location.href = '/dashboard/stock-takes/create'}
+              onClick={() => navigate('/dashboard/stock-takes/create')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus size={20} />

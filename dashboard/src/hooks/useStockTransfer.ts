@@ -1,154 +1,272 @@
-import { useState } from 'react';
-import type { TransferRequest, ProductBatch } from '../types/inventory.types';
-
-// --- MOCK DATA ---
-// Giả lập Kho B (Kho xuất) có các lô hàng sau
-const mockBatchesDB: Record<string, ProductBatch[]> = {
-  'P1': [ // Panadol
-    { id: 'B1', batchCode: 'L001', expiryDate: '2025-12-01', location: 'Kệ A1', quantity: 50 },
-    { id: 'B2', batchCode: 'L002', expiryDate: '2026-06-01', location: 'Kệ A2', quantity: 100 }
-  ],
-  'P2': [ // Berberin
-    { id: 'B3', batchCode: 'L003', expiryDate: '2025-10-01', location: 'Kệ B1', quantity: 20 } 
-    // Tổng có 20, giả sử MinStock là 10 -> Chỉ lấy được 10
-  ],
-  'P3': [] // Siro Ho: Không có hàng
-};
-
-const initialRequests: TransferRequest[] = [
-  {
-    id: 'REQ-001', code: 'PN-760605', sourceBranch: 'Kho Quận 1', targetBranch: 'Kho Tổng',
-    status: 'Pending', createdDate: '2025-11-22 16:12', createdBy: 'Admin',
-    items: [
-      { id: 'P1', name: 'Panadol Extra', category: 'Thuốc', price: 150000, totalStock: 0, minStock: 0, maxStock: 0, requestedQty: 120, allocatedQty: 0, missingQty: 0, batches: [], allocationDetails: [] },
-      { id: 'P2', name: 'Berberin 100mg', category: 'Thuốc', price: 25000, totalStock: 0, minStock: 0, maxStock: 0, requestedQty: 50, allocatedQty: 0, missingQty: 0, batches: [], allocationDetails: [] },
-      { id: 'P3', name: 'Siro Ho Prospan', category: 'Thuốc', price: 110000, totalStock: 0, minStock: 0, maxStock: 0, requestedQty: 30, allocatedQty: 0, missingQty: 0, batches: [], allocationDetails: [] },
-    ]
-  }
-];
+import { useState, useEffect, useCallback } from 'react';
+import { inventoryTransferService } from '../services/inventoryTransferService';
+import { batchService } from '../services/batchService';
+import type { TransferRequest, ProductBatch, TransferItem } from '../types/inventory.types';
 
 export const useStockTransfer = () => {
-  const [requests, setRequests] = useState<TransferRequest[]>(initialRequests);
+  const [requests, setRequests] = useState<TransferRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<TransferRequest | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // --- LOGIC 1: TÍNH TOÁN PHÂN BỔ (ALLOCATION) ---
-  // Khi Kho B mở phiếu xem, hệ thống tự tính toán xem lấy được bao nhiêu từ lô nào
-  const calculateAllocation = (req: TransferRequest) => {
-    const processedItems = req.items.map(item => {
-      const availableBatches = mockBatchesDB[item.id] || [];
-      let remainingNeed = item.requestedQty;
-      let totalAllocated = 0;
-      const allocationDetails: { batchId: string, takeQty: number }[] = [];
+  // Load transfers from API
+  const loadTransfers = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 Fetching inventory transfers...');
+      const response = await inventoryTransferService.getAllTransfers();
+      console.log('✅ Transfers response:', response);
 
-      // Duyệt qua từng lô để lấy hàng
-      const processedBatches = availableBatches.map(batch => {
-        // Logic: Transferable = Quantity - MinStock (Giả sử MinStock Kho B cho mỗi lô là 5 để an toàn)
-        // Trong thực tế MinStock tính trên tổng sp, ở đây giả lập đơn giản
-        const safeMinStockPerBatch = 5; 
-        const transferable = Math.max(0, batch.quantity - safeMinStockPerBatch);
+      let transfersData: any[] = [];
+      if (response.success === false) {
+        console.error('❌ Backend error:', response.error);
+        return;
+      }
 
-        let take = 0;
-        if (remainingNeed > 0 && transferable > 0) {
-          take = Math.min(remainingNeed, transferable);
-          remainingNeed -= take;
-          totalAllocated += take;
-          allocationDetails.push({ batchId: batch.id, takeQty: take });
+      // Handle different response structures
+      if (Array.isArray(response.data)) {
+        transfersData = response.data;
+      } else if (response.data?.transfers) {
+        transfersData = response.data.transfers;
+      } else if (response.data?.data) {
+        transfersData = response.data.data;
+      }
+
+      // Transform backend data to frontend format
+      const transformedRequests: TransferRequest[] = transfersData.map((transfer: any) => ({
+        id: String(transfer.id),
+        code: transfer.transfer_number || `TRF-${transfer.id}`,
+        sourceBranch: transfer.from_branch?.branch_name || `Chi nhánh #${transfer.from_branch_id}`,
+        targetBranch: transfer.to_branch?.branch_name || `Chi nhánh #${transfer.to_branch_id}`,
+        fromBranchId: transfer.from_branch_id,
+        toBranchId: transfer.to_branch_id,
+        status: transfer.status === 'pending' ? 'Pending' 
+              : transfer.status === 'approved' ? 'Approved'
+              : transfer.status === 'shipped' ? 'Shipped'
+              : transfer.status === 'received' ? 'Completed'
+              : 'Cancelled',
+        createdDate: new Date(transfer.created_at).toLocaleString('vi-VN'),
+        createdBy: transfer.created_by_user?.full_name || `User #${transfer.created_by}`,
+        items: (transfer.items || transfer.transfer_items || []).map((item: any) => ({
+          id: String(item.product_id),
+          name: item.product?.name || `Sản phẩm #${item.product_id}`,
+          category: item.product?.category?.name || 'Chưa phân loại',
+          price: parseFloat(item.product?.price || '0'),
+          totalStock: 0,
+          minStock: 0,
+          maxStock: 0,
+          requestedQty: item.quantity,
+          allocatedQty: 0,
+          missingQty: 0,
+          batches: [],
+          allocationDetails: []
+        }))
+      }));
+
+      setRequests(transformedRequests);
+    } catch (error) {
+      console.error('❌ Error loading transfers:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTransfers();
+  }, [loadTransfers]);
+
+  // Calculate allocation using FEFO batches from API
+  const calculateAllocation = async (req: TransferRequest): Promise<TransferRequest> => {
+    const processedItems: TransferItem[] = await Promise.all(
+      req.items.map(async (item) => {
+        try {
+          // Get FEFO batches for this product at source branch
+          const batchResponse = await batchService.getFEFOBatches(
+            req.fromBranchId!, 
+            parseInt(item.id)
+          );
+          
+          let availableBatches: any[] = [];
+          if (batchResponse.success !== false && batchResponse.data) {
+            availableBatches = Array.isArray(batchResponse.data) 
+              ? batchResponse.data 
+              : batchResponse.data.batches || [];
+          }
+
+          let remainingNeed = item.requestedQty;
+          let totalAllocated = 0;
+          const allocationDetails: { batchId: string, takeQty: number }[] = [];
+
+          // Process batches according to FEFO
+          const processedBatches: (ProductBatch & { transferable: number })[] = availableBatches.map((batch: any) => {
+            const available = batch.available_quantity || batch.quantity - (batch.reserved_quantity || 0);
+            const safeMinStock = 5; // Reserve some stock
+            const transferable = Math.max(0, available - safeMinStock);
+
+            let take = 0;
+            if (remainingNeed > 0 && transferable > 0) {
+              take = Math.min(remainingNeed, transferable);
+              remainingNeed -= take;
+              totalAllocated += take;
+              allocationDetails.push({ batchId: String(batch.id), takeQty: take });
+            }
+
+            return {
+              id: String(batch.id),
+              batchCode: batch.batch_number,
+              expiryDate: batch.expiry_date ? new Date(batch.expiry_date).toLocaleDateString('vi-VN') : 'N/A',
+              location: `Kệ ${batch.id}`,
+              quantity: batch.quantity,
+              transferable
+            };
+          });
+
+          return {
+            ...item,
+            batches: processedBatches,
+            allocationDetails,
+            allocatedQty: totalAllocated,
+            missingQty: item.requestedQty - totalAllocated
+          };
+        } catch (error) {
+          console.error(`Error getting batches for product ${item.id}:`, error);
+          return {
+            ...item,
+            batches: [],
+            allocationDetails: [],
+            allocatedQty: 0,
+            missingQty: item.requestedQty
+          };
         }
-
-        // Cast to type with transferable
-        return { ...batch, transferable } as ProductBatch & { transferable: number };
-      });
-
-      return {
-        ...item,
-        batches: processedBatches, // Danh sách lô kèm thông tin transferable
-        allocationDetails,
-        allocatedQty: totalAllocated,
-        missingQty: item.requestedQty - totalAllocated
-      };
-    });
+      })
+    );
 
     return { ...req, items: processedItems };
   };
 
-  const openRequestDetail = (req: TransferRequest) => {
-    const calculatedReq = calculateAllocation(req);
-    setSelectedRequest(calculatedReq);
-    setIsDetailOpen(true);
-  };
-
-  // --- LOGIC 2: TÁCH PHIẾU (SPLIT) ---
-  const splitAndApprove = () => {
-    if (!selectedRequest) return;
-
-    if (!window.confirm('Hệ thống sẽ tách các sản phẩm còn thiếu sang phiếu mới. Xác nhận?')) return;
-
-    // 1. Phiếu Gốc (Được duyệt): Chỉ chứa số lượng ĐÃ CÓ (Allocated)
-    const approvedItems = selectedRequest.items.map(item => ({
-      ...item,
-      requestedQty: item.allocatedQty, // Sửa yêu cầu thành số thực tế có
-      missingQty: 0
-    })).filter(item => item.requestedQty > 0); // Bỏ dòng nào = 0
-
-    // 2. Phiếu Mới (Chờ duyệt): Chứa phần thiếu (Missing)
-    const pendingItems = selectedRequest.items.filter(item => item.missingQty > 0).map(item => ({
-      ...item,
-      requestedQty: item.missingQty,
-      allocatedQty: 0,
-      missingQty: 0,
-      batches: [],
-      allocationDetails: []
-    }));
-
-    // Cập nhật State
-    const updatedRequests = requests.filter(r => r.id !== selectedRequest.id);
-    
-    // Thêm phiếu đã duyệt
-    updatedRequests.push({
-      ...selectedRequest,
-      status: 'Approved',
-      items: approvedItems,
-      code: `${selectedRequest.code}-A (Đã duyệt)`
-    });
-
-    // Thêm phiếu phần thiếu (nếu có)
-    if (pendingItems.length > 0) {
-      updatedRequests.push({
-        ...selectedRequest,
-        id: `REQ-${Date.now()}`,
-        code: `${selectedRequest.code}-B (Bổ sung)`,
-        status: 'Pending',
-        items: pendingItems
-      });
-    }
-
-    setRequests(updatedRequests);
-    setIsDetailOpen(false);
-  };
-
-  // --- LOGIC 3: DUYỆT THẲNG (Nếu đủ hàng) ---
-  const approveFull = () => {
-    if (!selectedRequest) return;
-    if (window.confirm('Xác nhận xuất kho theo yêu cầu?')) {
-        setRequests(prev => prev.map(r => 
-            r.id === selectedRequest.id ? { ...selectedRequest, status: 'Approved' } : r
-        ));
-        setIsDetailOpen(false);
+  const openRequestDetail = async (req: TransferRequest) => {
+    try {
+      const calculatedReq = await calculateAllocation(req);
+      setSelectedRequest(calculatedReq);
+      setIsDetailOpen(true);
+    } catch (error) {
+      console.error('Error opening request detail:', error);
+      setSelectedRequest(req);
+      setIsDetailOpen(true);
     }
   };
 
-  // --- LOGIC 4: HỦY YÊU CẦU ---
-  const rejectRequest = () => {
-      if(!window.confirm('Từ chối yêu cầu nhập hàng này?')) return;
-      setRequests(prev => prev.map(r => 
-        r.id === selectedRequest?.id ? { ...r, status: 'Cancelled' } : r
-    ));
-    setIsDetailOpen(false);
-  }
+  // Approve transfer via API
+  const approveFull = async () => {
+    if (!selectedRequest) return;
+    if (!window.confirm('Xác nhận duyệt phiếu chuyển kho?')) return;
+
+    try {
+      await inventoryTransferService.approveTransfer(parseInt(selectedRequest.id));
+      await loadTransfers();
+      setIsDetailOpen(false);
+      alert('✅ Đã duyệt phiếu chuyển kho thành công!');
+    } catch (error) {
+      console.error('Error approving transfer:', error);
+      alert('❌ Lỗi khi duyệt phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Ship transfer via API
+  const shipTransfer = async () => {
+    if (!selectedRequest) return;
+    if (!window.confirm('Xác nhận xuất kho?')) return;
+
+    try {
+      await inventoryTransferService.shipTransfer(parseInt(selectedRequest.id));
+      await loadTransfers();
+      setIsDetailOpen(false);
+      alert('✅ Đã xuất kho thành công!');
+    } catch (error) {
+      console.error('Error shipping transfer:', error);
+      alert('❌ Lỗi khi xuất kho: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Receive transfer via API
+  const receiveTransfer = async () => {
+    if (!selectedRequest) return;
+    if (!window.confirm('Xác nhận đã nhận hàng?')) return;
+
+    try {
+      await inventoryTransferService.receiveTransfer(parseInt(selectedRequest.id));
+      await loadTransfers();
+      setIsDetailOpen(false);
+      alert('✅ Đã nhận hàng thành công!');
+    } catch (error) {
+      console.error('Error receiving transfer:', error);
+      alert('❌ Lỗi khi nhận hàng: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Cancel transfer via API
+  const rejectRequest = async () => {
+    if (!selectedRequest) return;
+    const reason = prompt('Nhập lý do hủy phiếu:');
+    if (!reason) return;
+
+    try {
+      await inventoryTransferService.cancelTransfer(parseInt(selectedRequest.id), reason);
+      await loadTransfers();
+      setIsDetailOpen(false);
+      alert('✅ Đã hủy phiếu chuyển kho!');
+    } catch (error) {
+      console.error('Error cancelling transfer:', error);
+      alert('❌ Lỗi khi hủy phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  // Split and approve (tách phiếu nếu thiếu hàng)
+  const splitAndApprove = async () => {
+    if (!selectedRequest) return;
+    if (!window.confirm('Hệ thống sẽ duyệt phần có hàng và tạo phiếu mới cho phần thiếu. Xác nhận?')) return;
+
+    try {
+      // Duyệt phiếu hiện tại với số lượng thực có
+      await inventoryTransferService.approveTransfer(parseInt(selectedRequest.id));
+      
+      // Tạo phiếu mới cho phần thiếu
+      const missingItems = selectedRequest.items.filter(item => item.missingQty > 0);
+      if (missingItems.length > 0) {
+        await inventoryTransferService.createTransfer({
+          from_branch_id: selectedRequest.fromBranchId!,
+          to_branch_id: selectedRequest.toBranchId!,
+          notes: `Phiếu bổ sung từ ${selectedRequest.code}`,
+          items: missingItems.map(item => ({
+            product_id: parseInt(item.id),
+            quantity: item.missingQty
+          }))
+        });
+      }
+
+      await loadTransfers();
+      setIsDetailOpen(false);
+      alert('✅ Đã tách phiếu và duyệt thành công!');
+    } catch (error) {
+      console.error('Error splitting transfer:', error);
+      alert('❌ Lỗi khi tách phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
 
   return {
-    requests, selectedRequest, isDetailOpen,
-    actions: { openRequestDetail, closeDetail: () => setIsDetailOpen(false), splitAndApprove, approveFull, rejectRequest }
+    requests, 
+    selectedRequest, 
+    isDetailOpen,
+    loading,
+    actions: { 
+      openRequestDetail, 
+      closeDetail: () => setIsDetailOpen(false), 
+      splitAndApprove, 
+      approveFull, 
+      rejectRequest,
+      shipTransfer,
+      receiveTransfer,
+      refresh: loadTransfers
+    }
   };
 };

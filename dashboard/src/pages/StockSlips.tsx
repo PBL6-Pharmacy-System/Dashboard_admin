@@ -8,6 +8,8 @@ const StockSlips = () => {
   const { 
     slips, inventoryList,
     isCreateOpen, setIsCreateOpen, modalType, newSlipItems, slipReason, setSlipReason,
+    selectedBranchId, setSelectedBranchId, destinationBranchId, setDestinationBranchId, branches,
+    filterBranchId, setFilterBranchId,
     isReceiveOpen, setIsReceiveOpen, receivingSlip,
     actions 
   } = useStockSlips();
@@ -41,6 +43,28 @@ const StockSlips = () => {
         </div>
       </div>
 
+      {/* FILTER BAR */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+        <div className="flex gap-4 items-center">
+          <label className="text-sm font-bold text-gray-700">Lọc theo chi nhánh:</label>
+          <select 
+            value={filterBranchId || ''} 
+            onChange={(e) => setFilterBranchId(e.target.value ? Number(e.target.value) : null)}
+            className="flex-1 max-w-md border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-blue-500"
+          >
+            <option value="">Tất cả chi nhánh</option>
+            {branches.map(branch => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+          <div className="text-sm text-gray-500">
+            Hiển thị: <span className="font-bold text-gray-900">{slips.length}</span> phiếu
+          </div>
+        </div>
+      </div>
+
       {/* LIST TABLE */}
       <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
         <div className="overflow-auto flex-1">
@@ -49,8 +73,9 @@ const StockSlips = () => {
                <tr>
                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Mã phiếu</th>
                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Loại</th>
+                 <th className="p-4 text-xs font-bold text-gray-500 uppercase">Chi nhánh</th>
                  <th className="p-4 text-xs font-bold text-gray-500 uppercase">Thông tin</th>
-                 <th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Tổng tiền (Dự kiến)</th>
+                 <th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Tổng tiền</th>
                  <th className="p-4 text-xs font-bold text-gray-500 uppercase text-center">Trạng thái</th>
                  <th className="p-4 text-xs font-bold text-gray-500 uppercase text-right">Hành động</th>
                </tr>
@@ -64,6 +89,9 @@ const StockSlips = () => {
                        ? <span className="text-xs font-bold text-green-700 bg-green-100 px-2 py-1 rounded inline-flex items-center gap-1"><ArrowDownLeft size={12}/> NHẬP</span>
                        : <span className="text-xs font-bold text-orange-700 bg-orange-100 px-2 py-1 rounded inline-flex items-center gap-1"><ArrowUpRight size={12}/> XUẤT</span>
                      }
+                   </td>
+                   <td className="p-4">
+                     <div className="text-sm font-medium text-gray-700">{s.branchName || 'N/A'}</div>
                    </td>
                    <td className="p-4">
                      <div className="text-sm font-medium text-gray-900">{s.reason}</div>
@@ -99,7 +127,7 @@ const StockSlips = () => {
                    </td>
                  </tr>
                ))}
-               {slips.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-gray-400">Chưa có phiếu nào.</td></tr>}
+               {slips.length === 0 && <tr><td colSpan={7} className="p-8 text-center text-gray-400">Chưa có phiếu nào.</td></tr>}
              </tbody>
           </table>
         </div>
@@ -118,6 +146,40 @@ const StockSlips = () => {
 
             <div className="p-4 border-b border-gray-100 flex flex-col gap-4 bg-white">
               <div className="flex gap-4 items-end">
+                <div className="flex-1">
+                  <label className="text-xs font-bold text-gray-500 block mb-1">
+                    {modalType === 'IMPORT' ? 'Chi nhánh' : 'Chi nhánh nguồn'}
+                  </label>
+                  <select 
+                    value={selectedBranchId || ''} 
+                    onChange={(e) => setSelectedBranchId(Number(e.target.value))}
+                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-blue-500"
+                  >
+                    <option value="">-- Chọn chi nhánh --</option>
+                    {branches.map(branch => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {modalType === 'EXPORT' && (
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 block mb-1">Chi nhánh đích</label>
+                    <select 
+                      value={destinationBranchId || ''} 
+                      onChange={(e) => setDestinationBranchId(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-blue-500"
+                    >
+                      <option value="">-- Chọn chi nhánh đích --</option>
+                      {branches.filter(b => b.id !== selectedBranchId).map(branch => (
+                        <option key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex-1">
                   <label className="text-xs font-bold text-gray-500 block mb-1">Diễn giải</label>
                   <input type="text" value={slipReason} onChange={(e) => setSlipReason(e.target.value)} className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-blue-500" />

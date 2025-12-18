@@ -114,6 +114,25 @@ export const getAllFlashSales = async (filters?: FlashSaleFilter): Promise<Flash
         products: Array.isArray(products) ? products : []
       };
     });
+
+    // FE filter by status (running, upcoming, ended)
+    if (filters?.status && filters.status !== 'all') {
+      const now = new Date();
+      return normalized.filter(flashSale => {
+        const start = new Date(flashSale.start_time);
+        const end = new Date(flashSale.end_time);
+        if (filters.status === 'running') {
+          return flashSale.is_active && now >= start && now <= end;
+        }
+        if (filters.status === 'upcoming') {
+          return flashSale.is_active && now < start;
+        }
+        if (filters.status === 'ended') {
+          return !flashSale.is_active || now > end;
+        }
+        return true;
+      });
+    }
     return normalized;
   } catch (error) {
     console.error('Error fetching flash sales:', error);

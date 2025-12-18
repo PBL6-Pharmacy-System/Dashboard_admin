@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Eye, X, CheckCircle, XCircle, TruckIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Eye, CheckCircle, XCircle, TruckIcon } from 'lucide-react';
 import { supplierOrderService, type SupplierOrder } from '../services/supplierOrderService';
 
 const SupplierOrders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
 
   useEffect(() => {
     loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus]);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: Record<string, string> = {};
       if (selectedStatus) params.status = selectedStatus;
       
       console.log('🔄 Fetching supplier orders with params:', params);
@@ -74,6 +77,7 @@ const SupplierOrders = () => {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
+      draft: 'bg-gray-100 text-gray-800',
       pending: 'bg-yellow-100 text-yellow-800',
       approved: 'bg-blue-100 text-blue-800',
       shipped: 'bg-purple-100 text-purple-800',
@@ -85,6 +89,7 @@ const SupplierOrders = () => {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
+      draft: 'Nháp',
       pending: 'Chờ duyệt',
       approved: 'Đã duyệt',
       shipped: 'Đang vận chuyển',
@@ -126,7 +131,7 @@ const SupplierOrders = () => {
               </select>
             </div>
             <button
-              onClick={() => window.location.href = '/dashboard/supplier-orders/create'}
+              onClick={() => navigate('/dashboard/supplier-orders/create')}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus size={20} />
@@ -200,6 +205,18 @@ const SupplierOrders = () => {
                           <Eye size={18} />
                         </button>
                         
+                        {/* Draft -> Pending: Gửi đơn
+                        {order.status === 'draft' && (
+                          <button
+                            onClick={() => handleUpdateStatus(order.id, 'pending')}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded"
+                            title="Gửi đơn đặt hàng"
+                          >
+                            <CheckCircle size={18} />
+                          </button>
+                        )} */}
+                        
+                        {/* Pending -> Approved: Duyệt đơn */}
                         {order.status === 'pending' && (
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'approved')}
@@ -210,6 +227,7 @@ const SupplierOrders = () => {
                           </button>
                         )}
                         
+                        {/* Approved -> Shipped: Đang vận chuyển */}
                         {order.status === 'approved' && (
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'shipped')}
@@ -220,17 +238,19 @@ const SupplierOrders = () => {
                           </button>
                         )}
                         
+                        {/* Shipped -> Received: Nhận hàng */}
                         {order.status === 'shipped' && (
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'received')}
                             className="p-2 text-green-600 hover:bg-green-50 rounded"
-                            title="Xác nhận đã nhận"
+                            title="Xác nhận đã nhận hàng"
                           >
                             <CheckCircle size={18} />
                           </button>
                         )}
                         
-                        {['pending', 'approved'].includes(order.status) && (
+                        {/* Cancel button for draft, pending, approved */}
+                        {['draft', 'pending', 'approved'].includes(order.status) && (
                           <button
                             onClick={() => handleCancelOrder(order.id)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded"

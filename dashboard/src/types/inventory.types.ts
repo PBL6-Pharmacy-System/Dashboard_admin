@@ -28,6 +28,8 @@ export interface StockSlip {
   reason: string;
   date: string;
   creator: string;
+  branchId?: number;
+  branchName?: string;
   totalAmount: number; // Tính theo Actual Quantity khi hoàn tất
   status: 'Pending' | 'Completed' | 'Cancelled';
   items: SlipItem[];
@@ -40,9 +42,29 @@ export interface ProductBatch {
   expiryDate: string;
   location: string;  // Vị trí trong kho (Kệ A, B...)
   quantity: number;  // Tồn thực tế của lô này
+  transferable?: number; // SL có thể chuyển (sau khi trừ min stock)
 }
 
-// Sản phẩm kèm thông tin Lô (Dùng cho logic phân bổ)
+// Transfer Item - Sản phẩm trong phiếu chuyển kho
+export interface TransferItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  totalStock: number;
+  minStock: number;
+  maxStock: number;
+  requestedQty: number;    // SL yêu cầu
+  allocatedQty: number;    // SL đáp ứng được
+  missingQty: number;      // SL Còn thiếu
+  batches: (ProductBatch & { transferable?: number })[];
+  allocationDetails: {     // Chi tiết lấy từ lô nào
+    batchId: string;
+    takeQty: number;
+  }[];
+}
+
+// Sản phẩm kèm thông tin Lô (Dùng cho logic phân bổ) - Deprecated, use TransferItem
 export interface TransferProduct extends Product {
   batches: ProductBatch[]; 
   requestedQty: number;    // SL Kho A yêu cầu
@@ -54,14 +76,17 @@ export interface TransferProduct extends Product {
   }[];
 }
 
-// Phiếu yêu cầu
+// Phiếu yêu cầu chuyển kho
 export interface TransferRequest {
   id: string;
   code: string;
-  sourceBranch: string; // Kho yêu cầu (A)
-  targetBranch: string; // Kho xuất (B)
-  status: 'Pending' | 'Approved' | 'Splitted' | 'Cancelled';
-  items: TransferProduct[];
+  sourceBranch: string;   // Tên chi nhánh nguồn
+  targetBranch: string;   // Tên chi nhánh đích
+  fromBranchId?: number;  // ID chi nhánh nguồn
+  toBranchId?: number;    // ID chi nhánh đích
+  status: 'Pending' | 'Approved' | 'Shipped' | 'Completed' | 'Splitted' | 'Cancelled';
+  items: TransferItem[];
   createdDate: string;
   createdBy: string;
+  notes?: string;
 }

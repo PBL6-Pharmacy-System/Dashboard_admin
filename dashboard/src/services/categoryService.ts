@@ -23,7 +23,7 @@ export const categoryService = {
   },
 
   // DEPRECATED: This endpoint does not exist in backend
-  async getProductsByCategory(categoryName: string) {
+  async getProductsByCategory(_categoryName: string) {
     console.warn('[categoryService] getProductsByCategory is deprecated - use getProductsByCategoryId instead');
     return { products: [] };
   },

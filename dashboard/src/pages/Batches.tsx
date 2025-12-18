@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Package, Calendar, AlertTriangle, Trash2, Eye } from 'lucide-react';
+import { Package, Calendar, AlertTriangle, Trash2, Eye } from 'lucide-react';
 import { batchService, type ProductBatch } from '../services/batchService';
 import { branchService } from '../services/branchService';
 
@@ -9,7 +9,7 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState<number | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [searchTerm, setSearchTerm] = useState('');
+  // const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     loadBranches();
@@ -24,9 +24,16 @@ const Batches = () => {
       const response = await branchService.getAllBranches({ active: true });
       console.log('Branch API response:', response);
       // Handle both response.data array or response.data.branches array
-      const branchesData = Array.isArray(response.data) 
+      let branchesData = Array.isArray(response.data) 
         ? response.data 
         : (response.data?.branches || []);
+      
+      // Normalize branch data to ensure consistent field names
+      branchesData = branchesData.map((branch: any) => ({
+        ...branch,
+        branch_name: branch.name || branch.branch_name || `Chi nhánh ${branch.id}`
+      }));
+      
       setBranches(branchesData);
     } catch (error) {
       console.error('Error loading branches:', error);

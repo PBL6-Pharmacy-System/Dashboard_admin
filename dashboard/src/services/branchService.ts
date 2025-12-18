@@ -2,7 +2,8 @@ import { api } from './api';
 
 interface Branch {
   id: number;
-  branch_name: string;
+  name?: string;
+  branch_name?: string;
   address: string;
   phone: string;
   is_active: boolean;

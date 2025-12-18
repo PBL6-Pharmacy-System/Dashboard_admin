@@ -18,8 +18,7 @@ export interface Staff {
     full_name: string | null;
     avatar_url: string | null;
     is_active: boolean;
-    role_id: number;
-    roles: {
+    rolepermissions: {
       id: number;
       role_name: string;
     };

@@ -121,8 +121,8 @@ const StaffAccounts = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getRoleBadge(staff.users.roles.role_name)}`}>
-                          {staff.users.roles.role_name}
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border ${getRoleBadge(staff.users.rolepermissions.role_name)}`}>
+                          {staff.users.rolepermissions.role_name}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">{staff.branches?.name || 'Chưa phân chi nhánh'}</td>

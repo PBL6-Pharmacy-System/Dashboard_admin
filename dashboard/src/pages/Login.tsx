@@ -23,14 +23,15 @@ const Login = () => {
       const result = await authService.login(formData.username, formData.password);
       
       if (result.success && result.data) {
-        sessionStorage.setItem('accessToken', result.data.token);
-        sessionStorage.setItem('refreshToken', result.data.refreshToken);
+        // Store tokens in localStorage (persistent across page reloads)
+        localStorage.setItem('accessToken', result.data.token);
+        localStorage.setItem('refreshToken', result.data.refreshToken);
         // Store user with role_name extracted from roles
         const userData = {
           ...result.data.user,
           role_name: result.data.user.roles?.role_name || 'USER'
         };
-        sessionStorage.setItem('user', JSON.stringify(userData));
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Redirect based on role
         const isAdmin = userData.role_name?.toLowerCase() === 'admin';

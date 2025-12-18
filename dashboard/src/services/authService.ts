@@ -85,7 +85,7 @@ export const authService = {
 
   async getCurrentUser(): Promise<User | null> {
     try {
-      const token = sessionStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
       if (!token) return null;
 
       interface UserResponse {
@@ -95,7 +95,7 @@ export const authService = {
         full_name: string | null;
         role_id: number;
         avatar?: string;
-        roles?: {
+        rolepermissions?: {
           role_name: string;
         };
       }
@@ -110,7 +110,7 @@ export const authService = {
           email: user.email,
           full_name: user.full_name,
           role_id: user.role_id,
-          role_name: user.roles?.role_name || 'USER',
+          role_name: user.rolepermissions?.role_name || 'USER',
           avatar: user.avatar
         };
       }
@@ -123,7 +123,7 @@ export const authService = {
 
   async logout(): Promise<void> {
     try {
-      const token = sessionStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
       if (token) {
         await api.post('/auth/logout', {});
       }
@@ -136,13 +136,14 @@ export const authService = {
   },
 
   clearAuth() {
-    sessionStorage.removeItem('accessToken');
-    sessionStorage.removeItem('refreshToken');
-    sessionStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    sessionStorage.clear();
   },
 
   getStoredUser(): User | null {
-    const userStr = sessionStorage.getItem('user');
+    const userStr = localStorage.getItem('user');
     if (!userStr) return null;
     try {
       return JSON.parse(userStr);
@@ -152,10 +153,10 @@ export const authService = {
   },
 
   getAccessToken(): string | null {
-    return sessionStorage.getItem('accessToken');
+    return localStorage.getItem('accessToken');
   },
 
   isAuthenticated(): boolean {
-    return !!sessionStorage.getItem('accessToken');
+    return !!localStorage.getItem('accessToken');
   }
 };

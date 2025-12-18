@@ -91,7 +91,7 @@ export const useStaffManagement = () => {
         department: staff.department || '',
         branch_id: staff.branch_id || undefined,
         is_active: staff.users.is_active,
-        role_id: staff.users.role_id
+        role_id: staff.users.rolepermissions.id
       });
       setIsModalOpen(true);
       
@@ -112,7 +112,7 @@ export const useStaffManagement = () => {
             department: staffData.department || '',
             branch_id: staffData.branch_id || undefined,
             is_active: staffData.users.is_active,
-            role_id: staffData.users.role_id
+            role_id: staffData.users.rolepermissions.id
           });
         }
       } catch (fetchError) {
@@ -176,7 +176,7 @@ export const useStaffManagement = () => {
         staff.users.email.toLowerCase().includes(filters.search.toLowerCase()) ||
         (staff.users.phone || '').includes(filters.search);
       
-      const matchRole = filters.role === 'All' || staff.users.roles.role_name === filters.role;
+      const matchRole = filters.role === 'All' || staff.users.rolepermissions.role_name === filters.role;
       const matchStatus = filters.status === 'All' || 
         (filters.status === 'Active' && staff.users.is_active) ||
         (filters.status === 'Inactive' && !staff.users.is_active);

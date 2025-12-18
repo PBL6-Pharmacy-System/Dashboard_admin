@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -65,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
                 Về Dashboard
               </button>
             </div>
-            {process.env.NODE_ENV === 'development' && (
+            {import.meta.env.DEV && (
               <details className="mt-4">
                 <summary className="text-sm text-gray-500 cursor-pointer">
                   Chi tiết lỗi (dev only)

@@ -44,20 +44,20 @@ const Sidebar = () => {
 
   const allMenuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', adminOnly: true },
-    { icon: Package, label: 'Products', path: '/dashboard/products', adminOnly: false },
+    { icon: Package, label: 'Sản phẩm', path: '/dashboard/products', adminOnly: false },
     // { icon: Inbox, label: 'Inbox', path: '/dashboard/inbox', adminOnly: false },
-    { icon: ShoppingCart, label: 'Order Lists', path: '/dashboard/orders', adminOnly: false },
+    { icon: ShoppingCart, label: 'Danh sách đơn hàng', path: '/dashboard/orders', adminOnly: false },
     { icon: Zap, label: 'Flash Sales', path: '/dashboard/flash-sale', adminOnly: false },
-    { icon: Warehouse, label: 'Product Stock', path: '/dashboard/stock', adminOnly: false },
-    { icon: ClipboardList, label: 'Stock Slips', path: '/dashboard/stock-slips', adminOnly: false },
-    { icon: MapPin, label: 'Branches', path: '/dashboard/branches', adminOnly: false },
-    { icon: PackageSearch, label: 'Batches', path: '/dashboard/batches', adminOnly: false },
-    { icon: ShoppingBag, label: 'Supplier Orders', path: '/dashboard/supplier-orders', adminOnly: false },
-    { icon: FileText, label: 'Stock Takes', path: '/dashboard/stock-takes', adminOnly: false },
-    { icon: TruckIcon, label: 'Stock Transfer', path: '/dashboard/stock-transfer', adminOnly: false },
-    { icon: BarChart3, label: 'Inventory Reports', path: '/dashboard/inventory-reports', adminOnly: false },
-    { icon: UserCog, label: 'Staff Accounts', path: '/dashboard/staff', adminOnly: true },
-    { icon: Users, label: 'Customers', path: '/dashboard/customers', adminOnly: true },
+    { icon: Warehouse, label: 'Tồn kho hàng', path: '/dashboard/stock', adminOnly: false },
+    { icon: ClipboardList, label: 'Phiếu tồn kho', path: '/dashboard/stock-slips', adminOnly: false },
+    { icon: MapPin, label: 'Chi nhánh', path: '/dashboard/branches', adminOnly: false },
+    { icon: PackageSearch, label: 'Lô hàng', path: '/dashboard/batches', adminOnly: false },
+    { icon: ShoppingBag, label: 'Đơn hàng nhà cung cấp', path: '/dashboard/supplier-orders', adminOnly: false },
+    { icon: FileText, label: 'Kiểm kê', path: '/dashboard/stock-takes', adminOnly: false },
+    { icon: TruckIcon, label: 'Chuyển kho', path: '/dashboard/stock-transfer', adminOnly: false },
+    { icon: BarChart3, label: 'Báo cáo tồn kho', path: '/dashboard/inventory-reports', adminOnly: false },
+    { icon: UserCog, label: 'Tài khoản nhân viên', path: '/dashboard/staff', adminOnly: true },
+    { icon: Users, label: 'Khách hàng', path: '/dashboard/customers', adminOnly: true },
   ];
 
   // Filter menu items based on role

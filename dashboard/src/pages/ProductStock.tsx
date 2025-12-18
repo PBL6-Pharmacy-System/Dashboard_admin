@@ -1,55 +1,181 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Building2, AlertTriangle, PackageCheck, Calendar, RefreshCcw, Filter } from 'lucide-react';
-import type { Product } from '../types/dashboard.types';
+import { branchService } from '../services/branchService';
+import { productBatchService } from '../services/productBatchService';
+import type { ProductBatch as ProductBatchType } from '../services/productBatchService';
 
-// 1. Mock Data (Đã thêm expiryDate để lọc hạn sử dụng)
-const mockProducts: Product[] = [
-  {
-    id: '1', image: '', name: 'Panadol Extra', category: 'Thuốc giảm đau', price: 150000,
-    totalStock: 500, minStock: 50, availableColors: [],
-    expiryDate: '2026-12-01', // Còn xa
-    branches: [{ name: 'Kho Tổng', stock: 300 }]
-  },
-  {
-    id: '2', image: '', name: 'Berberin 100mg', category: 'Tiêu hóa', price: 25000,
-    totalStock: 30, minStock: 50, availableColors: [], // Dưới định mức
-    expiryDate: '2026-05-20',
-    branches: [{ name: 'Kho Tổng', stock: 30 }]
-  },
-  {
-    id: '3', image: '', name: 'Vitamin C 500mg', category: 'Vitamin', price: 80000,
-    totalStock: 120, minStock: 20, availableColors: [],
-    expiryDate: '2026-01-15', // Sắp hết hạn (Giả sử hiện tại là tháng 11/2025)
-    branches: [{ name: 'Kho Tổng', stock: 120 }]
-  },
-  {
-    id: '4', image: '', name: 'Khẩu trang Y tế', category: 'Vật tư', price: 35000,
-    totalStock: 1000, minStock: 200, availableColors: [],
-    expiryDate: '2028-01-01',
-    branches: [{ name: 'Kho Tổng', stock: 1000 }]
-  },
-  {
-    id: '5', image: '', name: 'Siro Ho Prospan', category: 'Thuốc Ho', price: 110000,
-    totalStock: 15, minStock: 20, availableColors: [], // Dưới định mức + Sắp hết hạn
-    expiryDate: '2026-02-01', 
-    branches: [{ name: 'Kho Tổng', stock: 15 }]
-  },
-];
+type Branch = {
+  id: number;
+  branch_name: string;
+};
+
+type InventoryItem = {
+  product_id: number;
+  product_name: string;
+  category: string;
+  stock: number;
+  min_stock: number;
+  max_stock: number;
+  nearest_expiry_date?: string;
+  batches?: Array<{
+    batch_number: string;
+    quantity: number;
+    expiry_date: string;
+  }>;
+};
+
+type InventoryItemData = {
+  product_id: number;
+  product?: { name: string; category?: { name: string } };
+  stock?: number;
+  quantity?: number;
+  min_stock?: number;
+  max_stock?: number;
+  batches?: Array<{ expiry_date: string }>;
+};
 
 // Định nghĩa kiểu lọc
 type FilterType = 'ALL' | 'LOW_STOCK' | 'EXPIRING_SOON';
 
 const ProductStock = () => {
-  const [selectedBranch, setSelectedBranch] = useState('All');
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<number | 'All'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   
   // 2. State quản lý thẻ đang được chọn (Mặc định là ALL)
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
 
-  // Hàm kiểm tra sắp hết hạn (Ví dụ: < 90 ngày tính từ giả định hôm nay là 2025-11-20)
+  useEffect(() => {
+    loadBranches();
+  }, []);
+
+  useEffect(() => {
+    loadInventory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranch]);
+
+  const loadBranches = async () => {
+    try {
+      const response = await branchService.getAllBranches({ active: true });
+      console.log('Branches API response:', response);
+      
+      let branchesData: Branch[] = [];
+      if (Array.isArray(response.data)) {
+        branchesData = response.data;
+      } else if (response.data?.branches && Array.isArray(response.data.branches)) {
+        branchesData = response.data.branches;
+      }
+      
+      // Normalize branch data to ensure consistent field names
+      const normalizedBranches = branchesData.map((branch: Branch & { name?: string; branch_id?: number }) => ({
+        id: (branch.id || branch.branch_id) as number,
+        branch_name: branch.name || branch.branch_name || `Chi nhánh ${branch.id || branch.branch_id}`
+      }));
+      
+      console.log('Normalized branches:', normalizedBranches);
+      setBranches(normalizedBranches);
+    } catch (error) {
+      console.error('Error loading branches:', error);
+    }
+  };
+
+  const loadInventory = async () => {
+    try {
+      setLoading(true);
+      let inventoryData: InventoryItem[] = [];
+
+      if (selectedBranch === 'All') {
+        // Load tất cả chi nhánh
+        const allBatches = await productBatchService.getAllBatches({ status: 'available' });
+        console.log('All batches response:', allBatches);
+        
+        if (allBatches.success) {
+          // Handle different response structures
+          const batchesArray = (
+            Array.isArray(allBatches.data) ? allBatches.data :
+            Array.isArray(allBatches.data?.batches) ? allBatches.data.batches :
+            Array.isArray(allBatches.data?.data) ? allBatches.data.data :
+            []
+          ) as ProductBatchType[];
+          
+          if (batchesArray.length > 0) {
+            // Group by product
+            const productMap = new Map<number, InventoryItem>();
+            
+            batchesArray.forEach(batch => {
+              const productId = batch.product_id;
+              if (!productMap.has(productId)) {
+                productMap.set(productId, {
+                  product_id: productId,
+                  product_name: batch.product?.name || `Product ${productId}`,
+                  category: 'Chưa phân loại',
+                  stock: 0,
+                  min_stock: 50,
+                  max_stock: 500,
+                  batches: []
+                });
+              }
+              
+              const item = productMap.get(productId)!;
+              item.stock += batch.quantity;
+              item.batches!.push({
+                batch_number: batch.batch_number,
+                quantity: batch.quantity,
+                expiry_date: batch.expiry_date
+              });
+              
+              // Find nearest expiry
+              if (!item.nearest_expiry_date || batch.expiry_date < item.nearest_expiry_date) {
+                item.nearest_expiry_date = batch.expiry_date;
+              }
+            });
+            
+            inventoryData = Array.from(productMap.values());
+          } else {
+            console.warn('No batches data available');
+          }
+        }
+      } else {
+        // Load 1 chi nhánh cụ thể
+        const response = await branchService.getBranchInventory(Number(selectedBranch));
+        console.log('Branch inventory response:', response);
+        
+        if (response.success) {
+          const dataArray = (
+            Array.isArray(response.data) ? response.data :
+            Array.isArray(response.data?.inventory) ? response.data.inventory :
+            Array.isArray(response.data?.data) ? response.data.data :
+            []
+          ) as InventoryItemData[];
+          
+          inventoryData = dataArray.map((item: InventoryItemData): InventoryItem => ({
+            product_id: item.product_id,
+            product_name: item.product?.name || `Product ${item.product_id}`,
+            category: item.product?.category?.name || 'Chưa phân loại',
+            stock: item.stock || item.quantity || 0,
+            min_stock: item.min_stock || 50,
+            max_stock: item.max_stock || 500,
+            nearest_expiry_date: item.batches?.[0]?.expiry_date,
+            batches: undefined
+          }));
+        }
+      }
+
+      setInventory(inventoryData);
+    } catch (error) {
+      console.error('Error loading inventory:', error);
+      setInventory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Hàm kiểm tra sắp hết hạn (< 90 ngày)
   const checkIsExpiring = (dateStr?: string) => {
     if (!dateStr) return false;
-    const today = new Date('2025-11-20'); // Giả lập ngày hiện tại
+    const today = new Date();
     const expiry = new Date(dateStr);
     const diffTime = expiry.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -58,40 +184,36 @@ const ProductStock = () => {
 
   // 3. Logic tính toán số liệu thống kê (Luôn tính trên TẤT CẢ dữ liệu gốc)
   const stockStats = useMemo(() => {
-    const lowStockCount = mockProducts.filter(item => item.totalStock < item.minStock).length;
-    const expiringCount = mockProducts.filter(item => checkIsExpiring(item.expiryDate)).length;
-    const totalUnits = mockProducts.reduce((acc, item) => acc + item.totalStock, 0);
+    const lowStockCount = inventory.filter(item => item.stock < item.min_stock).length;
+    const expiringCount = inventory.filter(item => checkIsExpiring(item.nearest_expiry_date)).length;
+    const totalUnits = inventory.reduce((acc, item) => acc + item.stock, 0);
 
     return {
-      totalItems: mockProducts.length,
+      totalItems: inventory.length,
       lowStock: lowStockCount,
       expiring: expiringCount,
       totalUnits: totalUnits
     };
-  }, []);
+  }, [inventory]);
 
   // 4. Logic lọc dữ liệu hiển thị bảng
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter(product => {
+    return inventory.filter(product => {
       // Lọc theo Search
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            product.id.includes(searchQuery);
-      
-      // Lọc theo Chi nhánh (Logic giả lập)
-      const matchesBranch = selectedBranch === 'All' ? true : 
-                            product.branches.some(b => b.name === selectedBranch && b.stock > 0);
+      const matchesSearch = product.product_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                            product.product_id.toString().includes(searchQuery);
 
       // Lọc theo Click Card (Quan trọng)
       let matchesCardFilter = true;
       if (activeFilter === 'LOW_STOCK') {
-        matchesCardFilter = product.totalStock < product.minStock;
+        matchesCardFilter = product.stock < product.min_stock;
       } else if (activeFilter === 'EXPIRING_SOON') {
-        matchesCardFilter = checkIsExpiring(product.expiryDate);
+        matchesCardFilter = checkIsExpiring(product.nearest_expiry_date);
       }
 
-      return matchesSearch && matchesBranch && matchesCardFilter;
+      return matchesSearch && matchesCardFilter;
     });
-  }, [searchQuery, selectedBranch, activeFilter]);
+  }, [searchQuery, activeFilter, inventory]);
 
   // Component Card nhỏ để tái sử dụng
   const FilterCard = ({ 
@@ -179,11 +301,11 @@ const ProductStock = () => {
             <select 
               className="appearance-none bg-white border border-gray-200 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
+              onChange={(e) => setSelectedBranch(e.target.value === 'All' ? 'All' : Number(e.target.value))}
             >
-              <option value="All">Toàn bộ kho</option>
-              <option value="Kho Tổng">Kho Tổng</option>
-              <option value="CN Quận 1">CN Quận 1</option>
+              {branches.map(branch => (
+                <option key={branch.id} value={branch.id}>{branch.branch_name}</option>
+              ))}
             </select>
             <Building2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
           </div>
@@ -237,40 +359,49 @@ const ProductStock = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredProducts.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <RefreshCcw className="w-5 h-5 animate-spin" />
+                      <span>Đang tải dữ liệu...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredProducts.length > 0 ? (
                 filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-gray-50/80 transition-colors">
+                  <tr key={product.product_id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{product.name}</div>
-                      <div className="text-xs text-gray-400">ID: {product.id}</div>
+                      <div className="font-medium text-gray-900">{product.product_name}</div>
+                      <div className="text-xs text-gray-400">ID: {product.product_id}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{product.category}</td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`font-bold ${product.totalStock < product.minStock ? 'text-red-600' : 'text-gray-900'}`}>
-                        {product.totalStock}
+                      <span className={`font-bold ${product.stock < product.min_stock ? 'text-red-600' : 'text-gray-900'}`}>
+                        {product.stock}
                       </span>
-                      <span className="text-xs text-gray-400 ml-1">/{product.minStock}</span>
+                      <span className="text-xs text-gray-400 ml-1">/{product.min_stock}</span>
                     </td>
                     <td className="px-6 py-4 text-sm">
                        <div className="flex items-center gap-1">
-                          {checkIsExpiring(product.expiryDate) && <AlertTriangle size={14} className="text-orange-500"/>}
-                          <span className={checkIsExpiring(product.expiryDate) ? 'text-orange-600 font-medium' : 'text-gray-600'}>
-                            {product.expiryDate}
+                          {checkIsExpiring(product.nearest_expiry_date) && <AlertTriangle size={14} className="text-orange-500"/>}
+                          <span className={checkIsExpiring(product.nearest_expiry_date) ? 'text-orange-600 font-medium' : 'text-gray-600'}>
+                            {product.nearest_expiry_date || 'N/A'}
                           </span>
                        </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      {product.totalStock < product.minStock && (
+                      {product.stock < product.min_stock && (
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-700 ml-2">
                           Thiếu hàng
                         </span>
                       )}
-                      {checkIsExpiring(product.expiryDate) && (
+                      {checkIsExpiring(product.nearest_expiry_date) && (
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-700 ml-2">
                           Cận date
                         </span>
                       )}
-                      {!(product.totalStock < product.minStock) && !checkIsExpiring(product.expiryDate) && (
+                      {!(product.stock < product.min_stock) && !checkIsExpiring(product.nearest_expiry_date) && (
                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">
                           Ổn định
                         </span>
