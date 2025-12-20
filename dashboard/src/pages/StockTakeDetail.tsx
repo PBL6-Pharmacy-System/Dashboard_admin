@@ -5,10 +5,15 @@ import {
   CheckCircle, XCircle, Clock, AlertTriangle, Save, X
 } from 'lucide-react';
 import { stockTakeService, type StockTake, type StockTakeItem } from '../services/stockTakeService';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const StockTakeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success, error: showError } = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel: handleConfirmCancel } = useConfirm();
   const [stockTake, setStockTake] = useState<StockTake | null>(null);
   const [items, setItems] = useState<StockTakeItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -71,40 +76,54 @@ const StockTakeDetail = () => {
       loadStockTakeDetail(id!);
     } catch (err) {
       console.error('Error updating item:', err);
-      alert('Không thể cập nhật số lượng');
+      showError('Không thể cập nhật số lượng');
     }
   };
 
   const handleComplete = async () => {
     if (!stockTake) return;
     
-    if (!confirm('Xác nhận hoàn thành kiểm kê? Hành động này không thể hoàn tác.')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Xác nhận hoàn thành',
+      message: 'Xác nhận hoàn thành kiểm kê?\nHành động này không thể hoàn tác.',
+      type: 'warning',
+      confirmText: 'Hoàn thành',
+      cancelText: 'Hủy'
+    });
+    
+    if (!confirmed) return;
     
     try {
       await stockTakeService.completeStockTake(stockTake.id);
       loadStockTakeDetail(id!);
-      alert('Đã hoàn thành kiểm kê');
+      success('Đã hoàn thành kiểm kê');
     } catch (err) {
       console.error('Error completing stock take:', err);
-      alert('Không thể hoàn thành kiểm kê');
+      showError('Không thể hoàn thành kiểm kê');
     }
   };
 
   const handleCancel = async () => {
     if (!stockTake) return;
     
-    const reason = prompt('Nhập lý do hủy:');
-    if (!reason) return;
+    const confirmed = await confirm({
+      title: 'Hủy phiếu kiểm kê',
+      message: 'Bạn có chắc chắn muốn hủy phiếu kiểm kê này?\nLý do: Cần nhập lý do hủy sau khi xác nhận.',
+      type: 'danger',
+      confirmText: 'Hủy phiếu',
+      cancelText: 'Quay lại'
+    });
+    
+    if (!confirmed) return;
+    const reason = 'Hủy bởi quản trị viên';
     
     try {
       await stockTakeService.cancelStockTake(stockTake.id, reason);
       loadStockTakeDetail(id!);
-      alert('Đã hủy phiếu kiểm kê');
+      success('Đã hủy phiếu kiểm kê');
     } catch (err) {
       console.error('Error cancelling stock take:', err);
-      alert('Không thể hủy phiếu kiểm kê');
+      showError('Không thể hủy phiếu kiểm kê');
     }
   };
 
@@ -429,7 +448,12 @@ const StockTakeDetail = () => {
           </div>
         </div>
       </div>
-    </div>
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleConfirmCancel}
+      />    </div>
   );
 };
 

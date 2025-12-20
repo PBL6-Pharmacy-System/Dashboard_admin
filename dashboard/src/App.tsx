@@ -31,6 +31,7 @@ import InventoryReports from './pages/InventoryReports';
 import FlashSale from './pages/FlashSale';
 import Toast from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import ChatBox from './components/ChatBox';
 import { useToast } from './hooks/useToast';
 import { DashboardProvider } from './contexts/DashboardContext';
 import { useEffect, useState } from 'react';
@@ -146,6 +147,9 @@ function App() {
         {/* 404 Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      
+      {/* Global ChatBox - Only show when authenticated */}
+      {authService.isAuthenticated() && <ChatBox userRole="admin" userName="Admin" />}
     </BrowserRouter>
   );
 }

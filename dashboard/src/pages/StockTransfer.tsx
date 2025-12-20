@@ -3,12 +3,90 @@ import {
   Calendar, User, AlertOctagon, RefreshCw, Plus, Truck, CheckCircle
 } from 'lucide-react';
 import { useStockTransfer } from '../hooks/useStockTransfer';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const StockTransfer = () => {
   const { requests, selectedRequest, isDetailOpen, loading, actions } = useStockTransfer();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
+  const { success, error } = useToast();
 
   // Kiểm tra xem phiếu đang xem có bị thiếu hàng không
   const hasShortage = selectedRequest?.items.some(i => Number(i.missingQty) > 0);
+
+  // Wrapped actions with confirm dialogs
+  const handleSplitAndApprove = async () => {
+    const confirmed = await confirm({
+      title: 'Xác nhận tách phiếu',
+      message: 'Hệ thống sẽ duyệt phần có hàng và tạo phiếu mới cho phần thiếu. Xác nhận?',
+      type: 'warning',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.splitAndApprove();
+        success('Đã tách phiếu và duyệt thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi tách phiếu');
+      }
+    }
+  };
+
+  const handleApproveFull = async () => {
+    const confirmed = await confirm({
+      title: 'Xác nhận duyệt phiếu',
+      message: 'Xác nhận duyệt phiếu chuyển kho?',
+      type: 'info',
+      confirmText: 'Duyệt',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.approveFull();
+        success('Đã duyệt phiếu chuyển kho thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi duyệt phiếu');
+      }
+    }
+  };
+
+  const handleShipTransfer = async () => {
+    const confirmed = await confirm({
+      title: 'Xác nhận xuất kho',
+      message: 'Xác nhận xuất kho?',
+      type: 'warning',
+      confirmText: 'Xuất kho',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.shipTransfer();
+        success('Đã xuất kho thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi xuất kho');
+      }
+    }
+  };
+
+  const handleReceiveTransfer = async () => {
+    const confirmed = await confirm({
+      title: 'Xác nhận nhận hàng',
+      message: 'Xác nhận đã nhận hàng?',
+      type: 'success',
+      confirmText: 'Đã nhận',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.receiveTransfer();
+        success('Đã nhận hàng thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi nhận hàng');
+      }
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
@@ -232,14 +310,14 @@ const StockTransfer = () => {
                   </button>
                   {hasShortage ? (
                     <button 
-                      onClick={actions.splitAndApprove}
+                      onClick={handleSplitAndApprove}
                       className="flex items-center gap-2 px-6 py-2 bg-orange-600 text-white rounded-lg font-bold hover:bg-orange-700 shadow-md transition-all"
                     >
                       <Split size={18} /> Tách Phiếu & Duyệt phần có
                     </button>
                   ) : (
                     <button 
-                      onClick={actions.approveFull}
+                      onClick={handleApproveFull}
                       className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md transition-all"
                     >
                       <Check size={18} /> Duyệt phiếu
@@ -254,7 +332,7 @@ const StockTransfer = () => {
                     Hủy phiếu
                   </button>
                   <button 
-                    onClick={actions.shipTransfer}
+                    onClick={handleShipTransfer}
                     className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white rounded-lg font-bold hover:bg-purple-700 shadow-md"
                   >
                     <Truck size={18} /> Xác nhận Xuất kho
@@ -263,8 +341,8 @@ const StockTransfer = () => {
               )}
               
               {selectedRequest.status === 'Shipped' && (
-                <button 
-                  onClick={actions.receiveTransfer}
+                <button
+                  onClick={handleReceiveTransfer}
                   className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 shadow-md"
                 >
                   <CheckCircle size={18} /> Xác nhận Nhận hàng
@@ -285,6 +363,12 @@ const StockTransfer = () => {
         </div>
       )}
 
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

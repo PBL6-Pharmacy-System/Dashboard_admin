@@ -218,8 +218,8 @@ export const useOrderManagement = () => {
     }
   };
 
-  const cancelOrder = async (order: Order) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?')) {
+  const cancelOrder = async (order: Order, confirmCallback?: () => Promise<boolean>) => {
+    if (confirmCallback && !(await confirmCallback())) {
       return;
     }
     

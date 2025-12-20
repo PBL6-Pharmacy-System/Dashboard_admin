@@ -5,9 +5,11 @@ import { productService, type Product } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { CATEGORY_MENU, type MainMenuKey, type Subcategory } from '../constants/categoryMenu';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const Products = () => {
   const location = useLocation();
+  const { error: showError } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [products, setProducts] = useState<Product[]>([]);
@@ -139,7 +141,7 @@ const Products = () => {
       setProductToDelete(null);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể xóa sản phẩm';
-      alert(errorMessage);
+      showError(errorMessage);
     } finally {
       setDeleting(false);
     }

@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, MapPin, Phone, Eye } from 'lucide-react';
 import { branchService, type Branch } from '../services/branchService';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const Branches = () => {
   const navigate = useNavigate();
+  const { error: showError } = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,7 +37,7 @@ const Branches = () => {
       // Check if backend returned error
       if (response.success === false) {
         console.error('❌ Backend error:', response.error);
-        alert(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách chi nhánh'}`);
+        showError(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách chi nhánh'}`);
         setBranches([]);
         return;
       }
@@ -55,7 +60,7 @@ const Branches = () => {
     } catch (error) {
       console.error('❌ Error loading branches:', error);
       const errorMessage = error instanceof Error ? error.message : 'Không thể kết nối đến server';
-      alert(`Lỗi: ${errorMessage}`);
+      showError(`Lỗi: ${errorMessage}`);
       setBranches([]); // Fallback to empty array
     } finally {
       setLoading(false);
@@ -106,7 +111,15 @@ const Branches = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('Bạn có chắc muốn xóa chi nhánh này?')) {
+    const confirmed = await confirm({
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc muốn xóa chi nhánh này?',
+      type: 'danger',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy'
+    });
+
+    if (confirmed) {
       try {
         await branchService.deleteBranch(id);
         loadBranches();
@@ -309,6 +322,13 @@ const Branches = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

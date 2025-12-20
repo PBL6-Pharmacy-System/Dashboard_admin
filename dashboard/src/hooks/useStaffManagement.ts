@@ -124,8 +124,8 @@ export const useStaffManagement = () => {
     }
   };
 
-  const deleteStaff = async (id: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa nhân viên này không?')) {
+  const deleteStaff = async (id: number, confirmCallback?: () => Promise<boolean>) => {
+    if (confirmCallback && !(await confirmCallback())) {
       return;
     }
     

@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { branchService } from '../services/branchService';
 import { stockTakeService } from '../services/stockTakeService';
+import { useToast } from '../hooks/useToast';
 
 type Branch = {
   id: number;
@@ -11,6 +12,7 @@ type Branch = {
 };
 const CreateStockTake = () => {
   const navigate = useNavigate();
+  const { success, error: showError, warning } = useToast();
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
@@ -40,7 +42,7 @@ const CreateStockTake = () => {
     e.preventDefault();
     
     if (!formData.branch_id) {
-      alert('Vui lòng chọn chi nhánh');
+      warning('Vui lòng chọn chi nhánh');
       return;
     }
 
@@ -52,11 +54,11 @@ const CreateStockTake = () => {
       });
       
       console.log('Stock take created:', response);
-      alert('✅ Tạo phiếu kiểm kê thành công!');
+      success('Tạo phiếu kiểm kê thành công!');
       navigate('/dashboard/stock-takes');
     } catch (error) {
       console.error('Error creating stock take:', error);
-      alert('❌ Lỗi khi tạo phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      showError('Lỗi khi tạo phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }

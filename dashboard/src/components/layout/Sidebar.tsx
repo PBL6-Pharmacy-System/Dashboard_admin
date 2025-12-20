@@ -20,10 +20,13 @@ import {
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { useState, useEffect } from 'react';
+import { useConfirm } from '../../hooks/useConfirm';
+import ConfirmDialog from '../ConfirmDialog';
 
 const Sidebar = () => {
   const navigate = useNavigate();
   const [userRole, setUserRole] = useState<string | null>(null);
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -36,7 +39,15 @@ const Sidebar = () => {
   }, []);
 
   const handleLogout = async () => {
-    if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
+    const confirmed = await confirm({
+      title: 'Đăng xuất',
+      message: 'Bạn có chắc chắn muốn đăng xuất?',
+      type: 'warning',
+      confirmText: 'Đăng xuất',
+      cancelText: 'Hủy'
+    });
+
+    if (confirmed) {
       await authService.logout();
       navigate('/login');
     }
@@ -119,6 +130,13 @@ const Sidebar = () => {
           <span className="text-sm font-medium">Logout</span>
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </aside>
   );
 };

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { supplierOrderService, type SupplierOrder } from '../services/supplierOrderService';
 import Toast from '../components/common/Toast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface ToastData {
   type: 'success' | 'error';
@@ -16,6 +18,7 @@ const SupplierOrders = () => {
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [toast, setToast] = useState<ToastData | null>(null);
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
 
   useEffect(() => {
     loadOrders();
@@ -75,7 +78,15 @@ const SupplierOrders = () => {
   };
 
   const handleUpdateStatus = async (id: number, status: string) => {
-    if (confirm(`Xác nhận cập nhật trạng thái đơn thành "${getStatusLabel(status)}"?`)) {
+    const confirmed = await confirm({
+      title: 'Xác nhận cập nhật',
+      message: `Xác nhận cập nhật trạng thái đơn thành "${getStatusLabel(status)}"?`,
+      type: status === 'cancelled' ? 'danger' : 'info',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+
+    if (confirmed) {
       try {
         const response = await supplierOrderService.updateOrderStatus(id, status);
         if (response.success) {
@@ -321,6 +332,13 @@ const SupplierOrders = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

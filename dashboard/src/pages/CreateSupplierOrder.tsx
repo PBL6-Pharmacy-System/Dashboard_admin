@@ -5,6 +5,7 @@ import { branchService } from '../services/branchService';
 import { productService } from '../services/productService';
 import { supplierOrderService } from '../services/supplierOrderService';
 import { api } from '../services/api';
+import { useToast } from '../hooks/useToast';
 
 type Branch = {
   id: number;
@@ -35,6 +36,7 @@ interface OrderItem {
 
 const CreateSupplierOrder = () => {
   const navigate = useNavigate();
+  const { success, error: showError, warning } = useToast();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -86,7 +88,7 @@ const CreateSupplierOrder = () => {
 
   const handleAddProduct = (product: Product) => {
     if (items.find(item => item.product_id === product.id)) {
-      alert('Sản phẩm đã có trong danh sách');
+      warning('Sản phẩm đã có trong danh sách');
       return;
     }
     
@@ -117,12 +119,12 @@ const CreateSupplierOrder = () => {
     e.preventDefault();
     
     if (!formData.supplier_id || !formData.branch_id) {
-      alert('Vui lòng chọn nhà cung cấp và chi nhánh');
+      warning('Vui lòng chọn nhà cung cấp và chi nhánh');
       return;
     }
     
     if (items.length === 0) {
-      alert('Vui lòng thêm ít nhất 1 sản phẩm');
+      warning('Vui lòng thêm ít nhất 1 sản phẩm');
       return;
     }
 
@@ -133,7 +135,7 @@ const CreateSupplierOrder = () => {
       console.log('📦 Creating supplier order with total:', totalAmount);
       
       if (isNaN(totalAmount) || totalAmount <= 0) {
-        alert('❌ Tổng tiền không hợp lệ. Vui lòng kiểm tra số lượng và giá!');
+        showError('Tổng tiền không hợp lệ. Vui lòng kiểm tra số lượng và giá!');
         return;
       }
       
@@ -151,11 +153,11 @@ const CreateSupplierOrder = () => {
         }))
       });
       
-      alert('✅ Tạo đơn đặt hàng thành công!');
+      success('Tạo đơn đặt hàng thành công!');
       navigate('/dashboard/supplier-orders');
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('❌ Lỗi khi tạo đơn: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      showError('Lỗi khi tạo đơn: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }

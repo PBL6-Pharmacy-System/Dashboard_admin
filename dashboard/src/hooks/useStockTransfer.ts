@@ -157,56 +157,57 @@ export const useStockTransfer = () => {
   };
 
   // Approve transfer via API
-  const approveFull = async () => {
+  const approveFull = async (confirmCallback?: () => Promise<boolean>) => {
     if (!selectedRequest) return;
-    if (!window.confirm('Xác nhận duyệt phiếu chuyển kho?')) return;
+    if (confirmCallback && !(await confirmCallback())) return;
 
     try {
       await inventoryTransferService.approveTransfer(parseInt(selectedRequest.id));
       await loadTransfers();
       setIsDetailOpen(false);
-      alert('✅ Đã duyệt phiếu chuyển kho thành công!');
+      console.log('✅ Đã duyệt phiếu chuyển kho thành công!');
+      return { success: true, message: 'Đã duyệt phiếu chuyển kho thành công!' };
     } catch (error) {
-      console.error('Error approving transfer:', error);
-      alert('❌ Lỗi khi duyệt phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi duyệt phiếu');
     }
   };
 
   // Ship transfer via API
-  const shipTransfer = async () => {
+  const shipTransfer = async (confirmCallback?: () => Promise<boolean>) => {
     if (!selectedRequest) return;
-    if (!window.confirm('Xác nhận xuất kho?')) return;
+    if (confirmCallback && !(await confirmCallback())) return;
 
     try {
       await inventoryTransferService.shipTransfer(parseInt(selectedRequest.id));
       await loadTransfers();
       setIsDetailOpen(false);
-      alert('✅ Đã xuất kho thành công!');
+      console.log('✅ Đã xuất kho thành công!');
+      return { success: true, message: 'Đã xuất kho thành công!' };
     } catch (error) {
-      console.error('Error shipping transfer:', error);
-      alert('❌ Lỗi khi xuất kho: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi xuất kho');
     }
   };
 
   // Receive transfer via API
-  const receiveTransfer = async () => {
+  const receiveTransfer = async (confirmCallback?: () => Promise<boolean>) => {
     if (!selectedRequest) return;
-    if (!window.confirm('Xác nhận đã nhận hàng?')) return;
+    if (confirmCallback && !(await confirmCallback())) return;
 
     try {
       await inventoryTransferService.receiveTransfer(parseInt(selectedRequest.id));
       await loadTransfers();
       setIsDetailOpen(false);
-      alert('✅ Đã nhận hàng thành công!');
+      console.log('✅ Đã nhận hàng thành công!');
+      return { success: true, message: 'Đã nhận hàng thành công!' };
     } catch (error) {
-      console.error('Error receiving transfer:', error);
-      alert('❌ Lỗi khi nhận hàng: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi nhận hàng');
     }
   };
 
   // Cancel transfer via API
   const rejectRequest = async () => {
     if (!selectedRequest) return;
+    // TODO: Create custom input dialog for reason
     const reason = prompt('Nhập lý do hủy phiếu:');
     if (!reason) return;
 
@@ -214,17 +215,17 @@ export const useStockTransfer = () => {
       await inventoryTransferService.cancelTransfer(parseInt(selectedRequest.id), reason);
       await loadTransfers();
       setIsDetailOpen(false);
-      alert('✅ Đã hủy phiếu chuyển kho!');
+      console.log('✅ Đã hủy phiếu chuyển kho!');
+      return { success: true, message: 'Đã hủy phiếu chuyển kho!' };
     } catch (error) {
-      console.error('Error cancelling transfer:', error);
-      alert('❌ Lỗi khi hủy phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi hủy phiếu');
     }
   };
 
   // Split and approve (tách phiếu nếu thiếu hàng)
-  const splitAndApprove = async () => {
+  const splitAndApprove = async (confirmCallback?: () => Promise<boolean>) => {
     if (!selectedRequest) return;
-    if (!window.confirm('Hệ thống sẽ duyệt phần có hàng và tạo phiếu mới cho phần thiếu. Xác nhận?')) return;
+    if (confirmCallback && !(await confirmCallback())) return;
 
     try {
       // Duyệt phiếu hiện tại với số lượng thực có
@@ -246,10 +247,10 @@ export const useStockTransfer = () => {
 
       await loadTransfers();
       setIsDetailOpen(false);
-      alert('✅ Đã tách phiếu và duyệt thành công!');
+      console.log('✅ Đã tách phiếu và duyệt thành công!');
+      return { success: true, message: 'Đã tách phiếu và duyệt thành công!' };
     } catch (error) {
-      console.error('Error splitting transfer:', error);
-      alert('❌ Lỗi khi tách phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi tách phiếu');
     }
   };
 

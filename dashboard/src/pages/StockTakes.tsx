@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, CheckCircle, XCircle, ClipboardList } from 'lucide-react';
 import { stockTakeService, type StockTake } from '../services/stockTakeService';
 import { branchService } from '../services/branchService';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const StockTakes = () => {
   const navigate = useNavigate();
+  const { error: showError } = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel: handleConfirmCancel } = useConfirm();
   const [stockTakes, setStockTakes] = useState<StockTake[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +61,7 @@ const StockTakes = () => {
       // Check if backend returned error
       if (response.success === false) {
         console.error('❌ Backend error:', response.error);
-        alert(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách kiểm kê'}`);
+        showError(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách kiểm kê'}`);
         setStockTakes([]);
         return;
       }
@@ -85,7 +90,15 @@ const StockTakes = () => {
   };
 
   const handleComplete = async (id: number) => {
-    if (confirm('Xác nhận hoàn thành kiểm kê? Hệ thống sẽ điều chỉnh tồn kho theo số thực tế.')) {
+    const confirmed = await confirm({
+      title: 'Xác nhận hoàn thành',
+      message: 'Xác nhận hoàn thành kiểm kê? Hệ thống sẽ điều chỉnh tồn kho theo số thực tế.',
+      type: 'warning',
+      confirmText: 'Hoàn thành',
+      cancelText: 'Hủy'
+    });
+
+    if (confirmed) {
       try {
         await stockTakeService.completeStockTake(id);
         loadStockTakes();
@@ -273,6 +286,13 @@ const StockTakes = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleConfirmCancel}
+      />
     </div>
   );
 };

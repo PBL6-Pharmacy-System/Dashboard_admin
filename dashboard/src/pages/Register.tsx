@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useToast } from '../hooks/useToast';
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const { warning } = useToast();
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -21,7 +23,7 @@ const Register: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.acceptTerms) {
-      alert('Please accept terms and conditions');
+      warning('Please accept terms and conditions');
       return;
     }
     // TODO: Implement register logic

@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { Package, Calendar, AlertTriangle, Trash2, Eye } from 'lucide-react';
 import { batchService, type ProductBatch } from '../services/batchService';
 import { branchService } from '../services/branchService';
+import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const Batches = () => {
-
+  const { error: showError } = useToast();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
   const [batches, setBatches] = useState<ProductBatch[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +60,7 @@ const Batches = () => {
       // Check if backend returned error
       if (response.success === false) {
         console.error('❌ Backend error:', response.error);
-        alert(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách lô hàng'}`);
+        showError(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách lô hàng'}`);
         setBatches([]);
         return;
       }
@@ -79,7 +83,7 @@ const Batches = () => {
     } catch (error) {
       console.error('❌ Error loading batches:', error);
       const errorMessage = error instanceof Error ? error.message : 'Không thể kết nối đến server';
-      alert(`Lỗi: ${errorMessage}`);
+      showError(`Lỗi: ${errorMessage}`);
       setBatches([]); // Fallback to empty array
     } finally {
       setLoading(false);
@@ -87,7 +91,15 @@ const Batches = () => {
   };
 
   const handleExpire = async (id: number) => {
-    if (confirm('Đánh dấu lô hàng này đã hết hạn?')) {
+    const confirmed = await confirm({
+      title: 'Xác nhận hết hạn',
+      message: 'Đánh dấu lô hàng này đã hết hạn?',
+      type: 'warning',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+
+    if (confirmed) {
       try {
         await batchService.markExpired(id);
         loadBatches();
@@ -98,6 +110,7 @@ const Batches = () => {
   };
 
   const handleDispose = async (id: number) => {
+    // TODO: Create a custom input dialog component for reason
     const reason = prompt('Nhập lý do tiêu hủy:');
     if (reason) {
       try {
@@ -301,6 +314,13 @@ const Batches = () => {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

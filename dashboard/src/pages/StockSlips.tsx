@@ -3,6 +3,9 @@ import {
   ArrowDownLeft, ArrowUpRight, Calendar, User, AlertTriangle 
 } from 'lucide-react';
 import { useStockSlips } from '../hooks/useStockSlips';
+import { useConfirm } from '../hooks/useConfirm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const StockSlips = () => {
   const { 
@@ -13,6 +16,75 @@ const StockSlips = () => {
     isReceiveOpen, setIsReceiveOpen, receivingSlip,
     actions 
   } = useStockSlips();
+  const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
+  const { success, error } = useToast();
+
+  // Wrapped confirmReceipt with confirm dialog
+  const handleConfirmReceipt = async () => {
+    const confirmed = await confirm({
+      title: 'Xác nhận nhập/xuất kho',
+      message: 'Xác nhận nhập/xuất kho theo số lượng thực tế này?',
+      type: 'info',
+      confirmText: 'Xác nhận',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.confirmReceipt();
+        success('Xác nhận thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi xác nhận');
+      }
+    }
+  };
+
+  // Wrapped saveSlip with toast
+  const handleSaveSlip = async () => {
+    try {
+      await actions.saveSlip();
+      success('Tạo phiếu thành công!');
+    } catch (err) {
+      error(err instanceof Error ? err.message : 'Lỗi khi tạo phiếu');
+    }
+  };
+
+  // Wrapped cancelSlip with confirm dialog and toast
+  const handleCancelSlip = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Xác nhận hủy phiếu',
+      message: 'Bạn có chắc chắn muốn hủy phiếu này?',
+      type: 'warning',
+      confirmText: 'Hủy phiếu',
+      cancelText: 'Không'
+    });
+    if (confirmed) {
+      try {
+        await actions.cancelSlip(id);
+        success('Đã hủy phiếu thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi hủy phiếu');
+      }
+    }
+  };
+
+  // Wrapped deleteSlip with confirm dialog and toast
+  const handleDeleteSlip = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Xác nhận xóa',
+      message: 'Bạn có chắc chắn muốn xóa phiếu này khỏi danh sách?',
+      type: 'danger',
+      confirmText: 'Xóa',
+      cancelText: 'Hủy'
+    });
+    if (confirmed) {
+      try {
+        await actions.deleteSlip(id);
+        success('Đã xóa phiếu thành công!');
+      } catch (err) {
+        error(err instanceof Error ? err.message : 'Lỗi khi xóa phiếu');
+      }
+    }
+  };
 
   // Helper: Render trạng thái
   const renderStatus = (status: string) => {
@@ -112,14 +184,14 @@ const StockSlips = () => {
                             <button onClick={() => actions.openReceiveModal(s)} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-bold transition-colors shadow-sm" title="Kiểm hàng & Nhập kho">
                               <Check size={14} strokeWidth={3}/> Duyệt
                             </button>
-                            <button onClick={() => actions.cancelSlip(s.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Hủy bỏ">
+                            <button onClick={() => handleCancelSlip(s.id)} className="p-1.5 text-red-500 hover:bg-red-50 rounded transition-colors" title="Hủy bỏ">
                               <Ban size={16}/>
                             </button>
                           </>
                         )}
                         {/* Nút Xóa (Chỉ hiện khi đã Hủy/Hoàn tất) */}
                         {s.status !== 'Pending' && (
-                           <button onClick={() => actions.deleteSlip(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Xóa lịch sử">
+                           <button onClick={() => handleDeleteSlip(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Xóa lịch sử">
                              <Trash2 size={16}/>
                            </button>
                         )}
@@ -234,7 +306,7 @@ const StockSlips = () => {
                <div className="text-sm font-bold text-blue-600">Tổng tiền: {newSlipItems.reduce((sum, item) => sum + (item.requestQuantity * item.unitPrice), 0).toLocaleString()} đ</div>
                <div className="flex gap-2">
                   <button onClick={() => setIsCreateOpen(false)} className="px-4 py-2 border rounded hover:bg-gray-50">Hủy</button>
-                  <button onClick={actions.saveSlip} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold">Tạo phiếu</button>
+                  <button onClick={handleSaveSlip} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold">Tạo phiếu</button>
                </div>
             </div>
           </div>
@@ -297,7 +369,7 @@ const StockSlips = () => {
             <div className="p-4 border-t flex justify-end gap-3 bg-gray-50 rounded-b-xl">
               <button onClick={() => setIsReceiveOpen(false)} className="px-4 py-2 border rounded hover:bg-white">Để sau</button>
               <button 
-                onClick={actions.confirmReceipt}
+                onClick={handleConfirmReceipt}
                 className="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 shadow-md flex items-center gap-2"
               >
                 <Check size={18}/> Xác nhận Nhập kho
@@ -308,6 +380,12 @@ const StockSlips = () => {
         </div>
       )}
 
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        {...confirmState.options}
+        onConfirm={handleConfirm}
+        onCancel={handleCancel}
+      />
     </div>
   );
 };

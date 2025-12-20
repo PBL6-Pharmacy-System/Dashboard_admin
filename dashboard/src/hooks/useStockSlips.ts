@@ -192,8 +192,8 @@ export const useStockSlips = () => {
     const lowStock = inventoryList.filter(p => p.totalStock <= p.minStock);
     
     if (lowStock.length === 0) {
-      alert('Kho ổn định, không cần nhập thêm!');
-      return;
+      console.log('Kho ổn định, không cần nhập thêm!');
+      return { success: false, message: 'Kho ổn định, không cần nhập thêm!' };
     }
 
     const items = lowStock.map(p => ({
@@ -227,13 +227,11 @@ export const useStockSlips = () => {
     try {
       if (modalType === 'IMPORT') {
         if (!selectedBranchId) {
-          alert('Vui lòng chọn chi nhánh!');
-          return;
+          throw new Error('Vui lòng chọn chi nhánh!');
         }
 
         if (newSlipItems.length === 0) {
-          alert('Vui lòng thêm ít nhất 1 sản phẩm!');
-          return;
+          throw new Error('Vui lòng thêm ít nhất 1 sản phẩm!');
         }
 
         // Validate all items have valid quantities and prices
@@ -242,8 +240,7 @@ export const useStockSlips = () => {
         );
 
         if (hasInvalidItems) {
-          alert('Vui lòng kiểm tra lại số lượng và đơn giá!');
-          return;
+          throw new Error('Vui lòng kiểm tra lại số lượng và đơn giá!');
         }
 
         // Create supplier order (acting as import slip)
@@ -265,13 +262,11 @@ export const useStockSlips = () => {
           });
           
           if (isNaN(qty) || qty <= 0) {
-            alert(`❌ Số lượng không hợp lệ cho sản phẩm ${item.productId}: "${item.requestQuantity}"`);
-            return;
+            throw new Error(`Số lượng không hợp lệ cho sản phẩm ${item.productId}: "${item.requestQuantity}"`);
           }
           
           if (isNaN(price) || price <= 0) {
-            alert(`❌ Giá không hợp lệ cho sản phẩm ${item.productId}: "${item.unitPrice}"`);
-            return;
+            throw new Error(`Giá không hợp lệ cho sản phẩm ${item.productId}: "${item.unitPrice}"`);
           }
           
           totalAmount += qty * price;
@@ -281,8 +276,7 @@ export const useStockSlips = () => {
 
         // Ensure total is valid number
         if (isNaN(totalAmount) || totalAmount <= 0) {
-          alert('❌ Lỗi tính toán tổng tiền. Vui lòng kiểm tra lại!');
-          return;
+          throw new Error('Lỗi tính toán tổng tiền. Vui lòng kiểm tra lại!');
         }
 
         const roundedTotal = Math.round(totalAmount * 100) / 100;
@@ -305,31 +299,28 @@ export const useStockSlips = () => {
         const response = await supplierOrderService.createOrder(orderPayload as any);
         console.log('✅ Order response:', response);
 
-        alert('✅ Tạo phiếu nhập thành công!');
+        console.log('✅ Tạo phiếu nhập thành công!');
         await loadSlips();
         setIsCreateOpen(false);
         setNewSlipItems([]);
         setSlipReason('');
+        return { success: true, message: 'Tạo phiếu nhập thành công!' };
       } else if (modalType === 'EXPORT') {
         // Create inventory transfer (export)
         if (!selectedBranchId) {
-          alert('Vui lòng chọn chi nhánh nguồn!');
-          return;
+          throw new Error('Vui lòng chọn chi nhánh nguồn!');
         }
 
         if (!destinationBranchId) {
-          alert('Vui lòng chọn chi nhánh đích!');
-          return;
+          throw new Error('Vui lòng chọn chi nhánh đích!');
         }
 
         if (selectedBranchId === destinationBranchId) {
-          alert('Chi nhánh nguồn và đích không được giống nhau!');
-          return;
+          throw new Error('Chi nhánh nguồn và đích không được giống nhau!');
         }
 
         if (newSlipItems.length === 0) {
-          alert('Vui lòng thêm ít nhất 1 sản phẩm!');
-          return;
+          throw new Error('Vui lòng thêm ít nhất 1 sản phẩm!');
         }
 
         await inventoryTransferService.createTransfer({
@@ -342,9 +333,10 @@ export const useStockSlips = () => {
           }))
         });
 
-        alert('✅ Tạo phiếu chuyển kho thành công!');
+        console.log('✅ Tạo phiếu chuyển kho thành công!');
         await loadSlips();
         setIsCreateOpen(false);
+        return { success: true, message: 'Tạo phiếu chuyển kho thành công!' };
       }
     } catch (error) {
       console.error('Error saving slip:', error);
@@ -359,7 +351,7 @@ export const useStockSlips = () => {
         }
       }
       
-      alert('❌ Lỗi khi tạo phiếu: ' + errorMsg);
+      throw new Error('Lỗi khi tạo phiếu: ' + errorMsg);
     }
   };
 
@@ -384,70 +376,72 @@ export const useStockSlips = () => {
     : slips;
 
   // Xác nhận hoàn tất
-  const confirmReceipt = async () => {
+  const confirmReceipt = async (confirmCallback?: () => Promise<boolean>) => {
     if (!receivingSlip) return;
     
-    if (window.confirm('Xác nhận nhập/xuất kho theo số lượng thực tế này?')) {
-      try {
-        // Extract the actual ID from slip ID (format: SO-123 or TR-456)
-        const [type, idStr] = receivingSlip.id.split('-');
-        const actualId = Number(idStr);
-        
-        if (type === 'SO') {
-          // Supplier Order - Import
-          await supplierOrderService.receiveOrder(actualId, {
-            items: receivingSlip.items.map(item => ({
-              product_id: Number(item.productId),
-              received_quantity: item.actualQuantity
-            }))
-          });
-          alert('✅ Nhận hàng thành công!');
-        } else if (type === 'TR') {
-          // Transfer - Export/Ship
-          await inventoryTransferService.shipTransfer(actualId);
-          alert('✅ Đã xuất kho chuyển hàng!');
-        }
+    if (confirmCallback && !(await confirmCallback())) return;
 
-        await loadSlips();
-        setIsReceiveOpen(false);
-        setReceivingSlip(null);
-      } catch (error) {
-        console.error('Error confirming receipt:', error);
-        alert('❌ Lỗi khi xác nhận: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    try {
+      // Extract the actual ID from slip ID (format: SO-123 or TR-456)
+      const [type, idStr] = receivingSlip.id.split('-');
+      const actualId = Number(idStr);
+      
+      if (type === 'SO') {
+        // Supplier Order - Import
+        await supplierOrderService.receiveOrder(actualId, {
+          items: receivingSlip.items.map(item => ({
+            product_id: Number(item.productId),
+            received_quantity: item.actualQuantity
+          }))
+        });
+        console.log('✅ Nhận hàng thành công!');
+      } else if (type === 'TR') {
+        // Transfer - Export/Ship
+        await inventoryTransferService.shipTransfer(actualId);
+        console.log('✅ Đã xuất kho chuyển hàng!');
       }
+
+      await loadSlips();
+      setIsReceiveOpen(false);
+      setReceivingSlip(null);
+      return { success: true, message: type === 'SO' ? 'Nhận hàng thành công!' : 'Đã xuất kho chuyển hàng!' };
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : 'Lỗi khi xác nhận');
     }
   };
 
-  const cancelSlip = async (id: string) => {
-    if (window.confirm('Hủy phiếu này?')) {
-      try {
-        const [type, idStr] = id.split('-');
-        const actualId = Number(idStr);
-        
-        if (type === 'SO') {
-          await supplierOrderService.cancelOrder(actualId, 'Hủy bởi người dùng');
-        } else if (type === 'TR') {
-          await inventoryTransferService.cancelTransfer(actualId, 'Hủy bởi người dùng');
-        }
-        
-        alert('✅ Đã hủy phiếu');
-        await loadSlips();
-      } catch (error) {
-        console.error('Error cancelling slip:', error);
-        alert('❌ Lỗi khi hủy phiếu');
+  const cancelSlip = async (id: string, confirmCallback?: () => Promise<boolean>) => {
+    if (confirmCallback && !(await confirmCallback())) return;
+
+    try {
+      const [type, idStr] = id.split('-');
+      const actualId = Number(idStr);
+      
+      if (type === 'SO') {
+        await supplierOrderService.cancelOrder(actualId, 'Hủy bởi người dùng');
+      } else if (type === 'TR') {
+        await inventoryTransferService.cancelTransfer(actualId, 'Hủy bởi người dùng');
       }
+      
+      console.log('✅ Đã hủy phiếu');
+      await loadSlips();
+      return { success: true, message: 'Đã hủy phiếu' };
+    } catch (error) {
+      console.error('Error cancelling slip:', error);
+      throw new Error('Lỗi khi hủy phiếu');
     }
   };
 
-  const deleteSlip = async (id: string) => {
-    if (window.confirm('Xóa vĩnh viễn khỏi lịch sử?')) {
-      try {
-        // Backend might not have delete endpoint, so just update locally
-        setSlips(prev => prev.filter(s => s.id !== id));
-        alert('✅ Đã xóa phiếu');
-      } catch (error) {
-        console.error('Error deleting slip:', error);
-      }
+  const deleteSlip = async (id: string, confirmCallback?: () => Promise<boolean>) => {
+    if (confirmCallback && !(await confirmCallback())) return;
+
+    try {
+      // Backend might not have delete endpoint, so just update locally
+      setSlips(prev => prev.filter(s => s.id !== id));
+      console.log('✅ Đã xóa phiếu');
+      return { success: true, message: 'Đã xóa phiếu' };
+    } catch (error) {
+      console.error('Error deleting slip:', error);
     }
   };
 

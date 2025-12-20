@@ -18,10 +18,12 @@ import {
 import { productService } from '../services/productService';
 import type { Product } from '../services/productService';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { error: showError } = useToast();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,7 @@ const ProductDetail = () => {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể tải thông tin sản phẩm';
       setError(errorMessage);
-      alert('Không thể tải thông tin sản phẩm');
+      showError('Không thể tải thông tin sản phẩm');
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ const ProductDetail = () => {
       }, 500);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể xóa sản phẩm';
-      alert(errorMessage);
+      showError(errorMessage);
       setDeleting(false);
     }
   };

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { branchService } from '../services/branchService';
 import { productService } from '../services/productService';
 import { inventoryTransferService } from '../services/inventoryTransferService';
+import { useToast } from '../hooks/useToast';
 
 type Branch = {
   id: number;
@@ -26,6 +27,7 @@ interface TransferItem {
 
 const CreateStockTransfer = () => {
   const navigate = useNavigate();
+  const { success, error: showError, warning } = useToast();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -69,7 +71,7 @@ const CreateStockTransfer = () => {
   const handleAddProduct = (product: Product) => {
     // Check if product already exists
     if (items.find(item => item.product_id === product.id)) {
-      alert('Sản phẩm đã có trong danh sách');
+      warning('Sản phẩm đã có trong danh sách');
       return;
     }
     
@@ -95,17 +97,17 @@ const CreateStockTransfer = () => {
     e.preventDefault();
     
     if (!formData.from_branch_id || !formData.to_branch_id) {
-      alert('Vui lòng chọn chi nhánh nguồn và đích');
+      warning('Vui lòng chọn chi nhánh nguồn và đích');
       return;
     }
     
     if (formData.from_branch_id === formData.to_branch_id) {
-      alert('Chi nhánh nguồn và đích không được trùng nhau');
+      warning('Chi nhánh nguồn và đích không được trùng nhau');
       return;
     }
     
     if (items.length === 0) {
-      alert('Vui lòng thêm ít nhất 1 sản phẩm');
+      warning('Vui lòng thêm ít nhất 1 sản phẩm');
       return;
     }
 
@@ -121,11 +123,11 @@ const CreateStockTransfer = () => {
         }))
       });
       
-      alert('✅ Tạo phiếu chuyển kho thành công!');
+      success('Tạo phiếu chuyển kho thành công!');
       navigate('/dashboard/stock-transfer');
     } catch (error) {
       console.error('Error creating transfer:', error);
-      alert('❌ Lỗi khi tạo phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      showError('Lỗi khi tạo phiếu: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
