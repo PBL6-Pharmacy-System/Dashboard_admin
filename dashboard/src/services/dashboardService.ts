@@ -1,16 +1,16 @@
-import { api, getAIBaseURL } from './api';
 import type {
-  RevenueResponse,
-  TopProductsResponse,
+  AnalyticsResponse,
+  BranchSalesResponse,
+  InventoryStatsResponse,
   OrdersStatsResponse,
   OverviewResponse,
-  InventoryStatsResponse,
-  BranchSalesResponse,
   PromotionsStatsResponse,
-  ReviewsStatsResponse,
   RecentActivitiesResponse,
-  AnalyticsResponse,
+  RevenueResponse,
+  ReviewsStatsResponse,
+  TopProductsResponse,
 } from '../types/dashboard.types';
+import { api, getAIBaseURL } from './api';
 
 export const dashboardService = {
   // 1. Lấy dữ liệu doanh thu theo ngày
