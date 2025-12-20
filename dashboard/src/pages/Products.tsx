@@ -370,7 +370,7 @@ const Products = () => {
 
                   <div className="flex items-center justify-between mb-2 text-xs">
                     <span className="font-semibold text-gray-700 bg-gray-100 px-2 py-0.5 rounded">
-                      Kho: {product.stock}
+                      Kho: {product.total_stock ?? product.stock ?? 0}
                     </span>
                     <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-semibold">
                       {product.brand || 'N/A'}
@@ -487,9 +487,9 @@ const Products = () => {
                   </td>
                   <td className="py-4 px-6">
                     <span className={`px-3 py-1.5 rounded-lg text-sm font-bold ${
-                      (product.in_stock || product.stock || 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      (product.total_stock ?? product.stock ?? 0) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
-                      {product.in_stock || product.stock || 0}
+                      {product.total_stock ?? product.stock ?? 0}
                     </span>
                   </td>
                   <td className="py-4 px-6">

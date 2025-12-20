@@ -97,11 +97,11 @@ const FlashSaleForm: React.FC = () => {
     const newProducts: FlashSaleProductInput[] = selectedProducts.map(product => ({
       product_id: product.id,
       flash_price: Math.round(parseFloat(product.price) * 0.8), // Default 20% discount
-      stock_limit: Math.min(product.stock || product.in_stock || 0, 50), // Default max 50
+      stock_limit: Math.min(product.total_stock ?? product.stock ?? 0, 50), // Default max 50
       purchase_limit: 5,
       product_name: product.name,
       product_price: parseFloat(product.price),
-      product_stock: product.stock ?? product.in_stock ?? 0,
+      product_stock: product.total_stock ?? product.stock ?? 0,
       product_image: product.image_url || undefined,
       product_sku: product.id.toString()
     }));

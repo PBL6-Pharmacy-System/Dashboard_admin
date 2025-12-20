@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit2, Trash2, MapPin, Phone, Eye } from 'lucide-react';
 import { branchService, type Branch } from '../services/branchService';
 
 const Branches = () => {
+  const navigate = useNavigate();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -205,9 +207,9 @@ const Branches = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => window.location.href = `/dashboard/branches/${branch.id}/inventory`}
+                          onClick={() => navigate(`/dashboard/branches/${branch.id}`)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Xem tồn kho"
+                          title="Xem chi tiết"
                         >
                           <Eye size={18} />
                         </button>

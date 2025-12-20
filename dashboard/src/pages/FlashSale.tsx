@@ -226,7 +226,7 @@ const FlashSale: React.FC = () => {
       const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
 
       // Get stock safely
-      const stock = product.stock ?? product.in_stock ?? 0;
+      const stock = product.total_stock ?? product.stock ?? 0;
 
       // Ensure product_image is string or undefined
       let productImage: string | undefined = undefined;

@@ -30,7 +30,7 @@ const InventoryReports = () => {
       console.log('✅ Top Exported:', exportedRes);
 
       setOverview(overviewRes.data || {});
-      setLowStock(lowStockRes.data || []);
+      setLowStock(lowStockRes.data?.products || []);
       setTopImported(importedRes.data || []);
       setTopExported(exportedRes.data || []);
     } catch (error) {
@@ -80,7 +80,7 @@ const InventoryReports = () => {
             <div>
               <p className="text-sm text-gray-600">Tổng tồn kho</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatNumber(overview?.totalQuantity || 0)}
+                {formatNumber(overview?.totalStock || 0)}
               </p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
@@ -108,7 +108,7 @@ const InventoryReports = () => {
             <div>
               <p className="text-sm text-gray-600">Giá trị tồn kho</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {formatNumber(overview?.totalValue || 0)}đ
+                {formatNumber(overview?.totalInventoryValue || 0)}đ
               </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-lg">
@@ -134,11 +134,11 @@ const InventoryReports = () => {
                   <div key={index} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
                     <div>
                       <p className="font-medium text-gray-900">{item.product_name || `Product #${item.product_id}`}</p>
-                      <p className="text-sm text-gray-600">Branch #{item.branch_id}</p>
+                      <p className="text-sm text-gray-600">{item.branch_name || `Branch #${item.branch_id}`}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-orange-600">{item.quantity}</p>
-                      <p className="text-xs text-gray-500">còn lại</p>
+                      <p className="font-semibold text-orange-600">{item.stock}/{item.min_stock}</p>
+                      <p className="text-xs text-gray-500">còn lại/tối thiểu</p>
                     </div>
                   </div>
                 ))}
@@ -167,11 +167,11 @@ const InventoryReports = () => {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{item.product_name || `Product #${item.product_id}`}</p>
+                        <p className="font-medium text-gray-900">{item.name || `Product #${item.id}`}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">{formatNumber(item.total_quantity)}</p>
+                      <p className="font-semibold text-green-600">{formatNumber(item.total_imported || 0)}</p>
                       <p className="text-xs text-gray-500">đã nhập</p>
                     </div>
                   </div>
@@ -201,11 +201,11 @@ const InventoryReports = () => {
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">{item.product_name || `Product #${item.product_id}`}</p>
+                        <p className="font-medium text-gray-900">{item.name || `Product #${item.id}`}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-blue-600">{formatNumber(item.total_quantity)}</p>
+                      <p className="font-semibold text-blue-600">{formatNumber(item.total_exported || 0)}</p>
                       <p className="text-xs text-gray-500">đã xuất</p>
                     </div>
                   </div>

@@ -5,8 +5,9 @@ export interface Product {
   name: string;
   description: string;
   price: string;
-  stock?: number;
-  in_stock?: number;
+  stock?: number; // Deprecated - use total_stock instead
+  in_stock?: boolean; // Boolean - for customer account (có hàng/hết hàng)
+  total_stock?: number; // Số lượng tồn kho thực tế (cho staff/admin)
   category_id: number | null;
   supplier_id: number | null;
   image_url: string | null;

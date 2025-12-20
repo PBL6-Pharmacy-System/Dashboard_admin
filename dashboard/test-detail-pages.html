@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Detail Pages - API Data Loading</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { color: #2563eb; }
+    h2 { color: #1e40af; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; }
+    button { background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin-right: 10px; margin-bottom: 10px; }
+    button:hover { background: #1d4ed8; }
+    pre { background: #1f2937; color: #f3f4f6; padding: 16px; border-radius: 6px; overflow-x: auto; max-height: 400px; overflow-y: auto; font-size: 12px; }
+    .error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 12px; border-radius: 6px; }
+    .success { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 12px; border-radius: 6px; }
+    .info { background: #dbeafe; border: 1px solid #3b82f6; color: #1e3a8a; padding: 12px; border-radius: 6px; margin: 10px 0; }
+    .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin: 20px 0; }
+    .test-card { background: #f9fafb; border: 2px solid #e5e7eb; padding: 16px; border-radius: 8px; }
+    .test-card h3 { margin-top: 0; color: #374151; }
+    .test-card.success { border-color: #10b981; background: #d1fae5; }
+    .test-card.error { border-color: #ef4444; background: #fee2e2; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test Detail Pages - API Data Loading</h1>
+    <p>Kiểm tra các API endpoints cho detail pages có load data đúng không</p>
+    
+    <div class="info">
+      <strong>📋 Test plan:</strong><br>
+      1️⃣ Test Supplier Order Detail API<br>
+      2️⃣ Test Batch Detail API<br>
+      3️⃣ Test Branch Detail API<br>
+      4️⃣ Test Stock Take Detail API<br>
+      5️⃣ Test với các ID thật từ list APIs
+    </div>
+    
+    <div style="margin: 20px 0;">
+      <button onclick="testAllAPIs()">▶️ Test All APIs</button>
+      <button onclick="testSupplierOrderDetail()">1️⃣ Test Supplier Order</button>
+      <button onclick="testBatchDetail()">2️⃣ Test Batch</button>
+      <button onclick="testBranchDetail()">3️⃣ Test Branch</button>
+      <button onclick="testStockTakeDetail()">4️⃣ Test Stock Take</button>
+      <button onclick="clearResults()">🗑️ Clear</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3000/api';
+    const resultsDiv = document.getElementById('results');
+
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+    }
+
+    function log(title, data, type = 'info') {
+      const section = document.createElement('div');
+      section.innerHTML = `
+        <h2>${title}</h2>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+      resultsDiv.appendChild(section);
+    }
+
+    function logCard(title, status, message) {
+      const card = document.createElement('div');
+      card.className = `test-card ${status}`;
+      card.innerHTML = `
+        <h3>${status === 'success' ? '✅' : '❌'} ${title}</h3>
+        <p>${message}</p>
+      `;
+      resultsDiv.appendChild(card);
+    }
+
+    async function testSupplierOrderDetail() {
+      try {
+        // First get list to find a real ID
+        const listResponse = await fetch(`${API_BASE_URL}/supplier-orders?limit=5`);
+        const listData = await listResponse.json();
+        
+        console.log('📦 Supplier orders list:', listData);
+        
+        const orders = Array.isArray(listData.data) ? listData.data : 
+                      listData.data?.orders || [];
+        
+        if (orders.length === 0) {
+          logCard('Supplier Order Detail', 'error', 'Không có đơn hàng nào để test');
+          return;
+        }
+
+        const testId = orders[0].id;
+        log(`📦 Testing với Supplier Order ID: ${testId}`, orders[0]);
+
+        // Test detail API
+        const detailResponse = await fetch(`${API_BASE_URL}/supplier-orders/${testId}`);
+        const detailData = await detailResponse.json();
+        
+        log('✅ Supplier Order Detail Response', detailData);
+
+        if (detailData.success && detailData.data) {
+          logCard('Supplier Order Detail', 'success', `API hoạt động tốt. ID: ${testId}`);
+          
+          // Check required fields
+          const order = detailData.data;
+          const hasItems = order.items && Array.isArray(order.items);
+          const hasSupplier = order.supplier || order.supplier_id;
+          const hasBranch = order.branch || order.branch_id;
+          
+          log('📋 Data structure check', {
+            hasItems: hasItems,
+            itemsCount: order.items?.length || 0,
+            hasSupplier: !!hasSupplier,
+            hasBranch: !!hasBranch,
+            hasStatus: !!order.status,
+            hasTotalAmount: !!order.total_amount
+          });
+        } else {
+          logCard('Supplier Order Detail', 'error', 'API trả về không đúng format');
+        }
+      } catch (error) {
+        logCard('Supplier Order Detail', 'error', error.message);
+        console.error(error);
+      }
+    }
+
+    async function testBatchDetail() {
+      try {
+        const listResponse = await fetch(`${API_BASE_URL}/product-batches?limit=5`);
+        const listData = await listResponse.json();
+        
+        const batches = Array.isArray(listData.data) ? listData.data : 
+                       listData.data?.batches || [];
+        
+        if (batches.length === 0) {
+          logCard('Batch Detail', 'error', 'Không có lô hàng nào để test');
+          return;
+        }
+
+        const testId = batches[0].id;
+        log(`📦 Testing với Batch ID: ${testId}`, batches[0]);
+
+        const detailResponse = await fetch(`${API_BASE_URL}/product-batches/${testId}`);
+        const detailData = await detailResponse.json();
+        
+        log('✅ Batch Detail Response', detailData);
+
+        if (detailData.success && detailData.data) {
+          logCard('Batch Detail', 'success', `API hoạt động tốt. ID: ${testId}`);
+          
+          const batch = detailData.data;
+          log('📋 Data structure check', {
+            hasProduct: !!(batch.product || batch.product_id),
+            hasBranch: !!(batch.branch || batch.branch_id),
+            hasQuantity: typeof batch.quantity === 'number',
+            hasExpiryDate: !!batch.expiry_date,
+            hasCostPrice: !!batch.cost_price,
+            batchNumber: batch.batch_number || batch.batch_code
+          });
+        } else {
+          logCard('Batch Detail', 'error', 'API trả về không đúng format');
+        }
+      } catch (error) {
+        logCard('Batch Detail', 'error', error.message);
+        console.error(error);
+      }
+    }
+
+    async function testBranchDetail() {
+      try {
+        const listResponse = await fetch(`${API_BASE_URL}/branches?limit=5`);
+        const listData = await listResponse.json();
+        
+        const branches = Array.isArray(listData.data) ? listData.data : 
+                        listData.data?.branches || [];
+        
+        if (branches.length === 0) {
+          logCard('Branch Detail', 'error', 'Không có chi nhánh nào để test');
+          return;
+        }
+
+        const testId = branches[0].id || branches[0].branch_id;
+        log(`📦 Testing với Branch ID: ${testId}`, branches[0]);
+
+        // Test branch detail
+        const detailResponse = await fetch(`${API_BASE_URL}/branches/${testId}?includeInventory=true`);
+        const detailData = await detailResponse.json();
+        
+        log('✅ Branch Detail Response', detailData);
+
+        // Test branch inventory
+        const inventoryResponse = await fetch(`${API_BASE_URL}/branches/${testId}/inventory?limit=10`);
+        const inventoryData = await inventoryResponse.json();
+        
+        log('✅ Branch Inventory Response', inventoryData);
+
+        if (detailData.success && detailData.data) {
+          logCard('Branch Detail', 'success', `API hoạt động tốt. ID: ${testId}`);
+          
+          const branch = detailData.data;
+          const inventory = Array.isArray(inventoryData.data) ? inventoryData.data :
+                           inventoryData.data?.inventory || [];
+          
+          log('📋 Data structure check', {
+            hasName: !!(branch.name || branch.branch_name),
+            hasAddress: !!branch.address,
+            hasPhone: !!branch.phone,
+            isActive: typeof branch.is_active === 'boolean',
+            inventoryCount: inventory.length
+          });
+        } else {
+          logCard('Branch Detail', 'error', 'API trả về không đúng format');
+        }
+      } catch (error) {
+        logCard('Branch Detail', 'error', error.message);
+        console.error(error);
+      }
+    }
+
+    async function testStockTakeDetail() {
+      try {
+        const listResponse = await fetch(`${API_BASE_URL}/stock-takes?limit=5`);
+        const listData = await listResponse.json();
+        
+        const stockTakes = Array.isArray(listData.data) ? listData.data : 
+                          listData.data?.stockTakes || listData.data?.data || [];
+        
+        if (stockTakes.length === 0) {
+          logCard('Stock Take Detail', 'error', 'Không có phiếu kiểm kê nào để test');
+          return;
+        }
+
+        const testId = stockTakes[0].id;
+        log(`📦 Testing với Stock Take ID: ${testId}`, stockTakes[0]);
+
+        // Test stock take detail
+        const detailResponse = await fetch(`${API_BASE_URL}/stock-takes/${testId}`);
+        const detailData = await detailResponse.json();
+        
+        log('✅ Stock Take Detail Response', detailData);
+
+        // Test stock take items
+        const itemsResponse = await fetch(`${API_BASE_URL}/stock-takes/${testId}/items`);
+        const itemsData = await itemsResponse.json();
+        
+        log('✅ Stock Take Items Response', itemsData);
+
+        if (detailData.success && detailData.data) {
+          logCard('Stock Take Detail', 'success', `API hoạt động tốt. ID: ${testId}`);
+          
+          const stockTake = detailData.data;
+          const items = Array.isArray(itemsData.data) ? itemsData.data :
+                       itemsData.data?.items || [];
+          
+          log('📋 Data structure check', {
+            hasBranch: !!(stockTake.branch || stockTake.branch_id),
+            hasStatus: !!stockTake.status,
+            hasStockTakeNumber: !!stockTake.stock_take_number,
+            itemsCount: items.length,
+            hasExpectedQuantity: items.length > 0 && typeof items[0].expected_quantity === 'number'
+          });
+        } else {
+          logCard('Stock Take Detail', 'error', 'API trả về không đúng format');
+        }
+      } catch (error) {
+        logCard('Stock Take Detail', 'error', error.message);
+        console.error(error);
+      }
+    }
+
+    async function testAllAPIs() {
+      clearResults();
+      
+      const section = document.createElement('div');
+      section.innerHTML = '<h2>🧪 Running all tests...</h2>';
+      resultsDiv.appendChild(section);
+      
+      await testSupplierOrderDetail();
+      await testBatchDetail();
+      await testBranchDetail();
+      await testStockTakeDetail();
+      
+      const summary = document.createElement('div');
+      summary.className = 'info';
+      summary.style.marginTop = '30px';
+      summary.innerHTML = `
+        <strong>✅ Test hoàn thành!</strong><br>
+        Kiểm tra kết quả ở trên để xem API nào cần fix.
+      `;
+      resultsDiv.appendChild(summary);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Stock Data - API Debug</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { color: #2563eb; }
+    h2 { color: #1e40af; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; }
+    button { background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin-right: 10px; }
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    pre { background: #1f2937; color: #f3f4f6; padding: 16px; border-radius: 6px; overflow-x: auto; max-height: 500px; overflow-y: auto; }
+    .error { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 12px; border-radius: 6px; }
+    .success { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 12px; border-radius: 6px; }
+    .warning { background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 12px; border-radius: 6px; margin-top: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
+    .stat-card { background: #eff6ff; border: 2px solid #3b82f6; padding: 16px; border-radius: 8px; }
+    .stat-label { font-size: 14px; color: #1e40af; font-weight: 600; }
+    .stat-value { font-size: 28px; color: #1e3a8a; font-weight: bold; margin-top: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+    th { background: #f9fafb; font-weight: 600; color: #374151; }
+    tr:hover { background: #f9fafb; }
+    .stock-zero { color: #dc2626; font-weight: bold; }
+    .stock-ok { color: #16a34a; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Test Stock Data - Kiểm tra dữ liệu tồn kho</h1>
+    <p>Công cụ này giúp kiểm tra dữ liệu trả về từ API có liên quan đến tồn kho sản phẩm</p>
+    
+    <div style="margin: 20px 0;">
+      <button onclick="testProductsAPI()">1️⃣ Test Products API (/products)</button>
+      <button onclick="testBranchInventory()">2️⃣ Test Branch Inventory</button>
+      <button onclick="testProductBatches()">3️⃣ Test Product Batches</button>
+      <button onclick="testAllAPIs()">▶️ Test ALL APIs</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const API_BASE_URL = 'http://localhost:3000/api';
+    const resultsDiv = document.getElementById('results');
+
+    function log(title, data, type = 'info') {
+      const section = document.createElement('div');
+      section.innerHTML = `
+        <h2>${title}</h2>
+        <pre>${JSON.stringify(data, null, 2)}</pre>
+      `;
+      resultsDiv.appendChild(section);
+    }
+
+    function logError(title, error) {
+      const section = document.createElement('div');
+      section.innerHTML = `
+        <h2>${title}</h2>
+        <div class="error">❌ Error: ${error.message}</div>
+      `;
+      resultsDiv.appendChild(section);
+    }
+
+    function analyzeProductStock(products) {
+      if (!Array.isArray(products)) {
+        return { error: 'Products is not an array' };
+      }
+
+      const stockZero = products.filter(p => (!p.total_stock && !p.stock) || p.total_stock === 0 || p.stock === 0);
+      const stockNonZero = products.filter(p => (p.total_stock && p.total_stock > 0) || (p.stock && p.stock > 0));
+      
+      const analysis = {
+        total: products.length,
+        stockZero: stockZero.length,
+        stockNonZero: stockNonZero.length,
+        percentageZero: ((stockZero.length / products.length) * 100).toFixed(2) + '%',
+        sampleZero: stockZero.slice(0, 5).map(p => ({
+          id: p.id,
+          name: p.name,
+          total_stock: p.total_stock,
+          stock: p.stock,
+          in_stock: p.in_stock
+        })),
+        sampleNonZero: stockNonZero.slice(0, 5).map(p => ({
+          id: p.id,
+          name: p.name,
+          total_stock: p.total_stock,
+          stock: p.stock,
+          in_stock: p.in_stock
+        }))
+      };
+
+      return analysis;
+    }
+
+    function displayProductTable(products) {
+      if (!Array.isArray(products) || products.length === 0) {
+        return '<p class="warning">Không có dữ liệu sản phẩm</p>';
+      }
+
+      const rows = products.slice(0, 20).map(p => `
+        <tr>
+          <td>${p.id}</td>
+          <td>${p.name || 'N/A'}</td>
+          <td class="${(p.total_stock === 0 || p.total_stock === undefined || p.total_stock === null) ? 'stock-zero' : 'stock-ok'}">
+            ${p.total_stock !== undefined ? p.total_stock : 'undefined'}
+          </td>
+          <td class="${(p.stock === 0 || p.stock === undefined || p.stock === null) ? 'stock-zero' : 'stock-ok'}">
+            ${p.stock !== undefined ? p.stock : 'undefined'}
+          </td>
+          <td>${typeof p.in_stock === 'boolean' ? (p.in_stock ? '✅ Còn hàng' : '❌ Hết hàng') : (p.in_stock || 'N/A')}</td>
+          <td>${p.categories?.name || p.category?.name || 'N/A'}</td>
+        </tr>
+      `).join('');
+
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tên sản phẩm</th>
+              <th>total_stock (Admin)</th>
+              <th>stock (Old)</th>
+              <th>in_stock (Customer)</th>
+              <th>Category</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="warning">⚠️ Chỉ hiển thị 20 sản phẩm đầu tiên</p>
+      `;
+    }
+
+    async function testProductsAPI() {
+      resultsDiv.innerHTML = '<h2>⏳ Đang kiểm tra Products API...</h2>';
+      
+      try {
+        const response = await fetch(`${API_BASE_URL}/products?page=1&limit=100`);
+        const data = await response.json();
+        
+        log('📦 RAW Response from /products', data);
+
+        // Extract products array
+        let products = [];
+        if (Array.isArray(data)) {
+          products = data;
+        } else if (data.data?.products) {
+          products = data.data.products;
+        } else if (data.products) {
+          products = data.products;
+        } else if (Array.isArray(data.data)) {
+          products = data.data;
+        }
+
+        const analysis = analyzeProductStock(products);
+        
+        const statsHtml = `
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">Tổng sản phẩm</div>
+              <div class="stat-value">${analysis.total}</div>
+            </div>
+            <div class="stat-card" style="background: #fee2e2; border-color: #dc2626;">
+              <div class="stat-label">Tồn kho = 0</div>
+              <div class="stat-value" style="color: #991b1b;">${analysis.stockZero}</div>
+              <div style="font-size: 12px; color: #991b1b; margin-top: 4px;">${analysis.percentageZero}</div>
+            </div>
+            <div class="stat-card" style="background: #d1fae5; border-color: #10b981;">
+              <div class="stat-label">Tồn kho > 0</div>
+              <div class="stat-value" style="color: #065f46;">${analysis.stockNonZero}</div>
+            </div>
+          </div>
+        `;
+
+        const section = document.createElement('div');
+        section.innerHTML = `
+          <h2>📊 Phân tích dữ liệu Products</h2>
+          ${statsHtml}
+          <h3>📋 Danh sách sản phẩm (Sample 20 đầu tiên):</h3>
+          ${displayProductTable(products)}
+        `;
+        resultsDiv.appendChild(section);
+
+        log('🔬 Chi tiết phân tích', analysis);
+
+      } catch (error) {
+        logError('❌ Error khi gọi Products API', error);
+      }
+    }
+
+    async function testBranchInventory() {
+      const section = document.createElement('div');
+      section.innerHTML = '<h2>⏳ Đang kiểm tra Branch Inventory...</h2>';
+      resultsDiv.appendChild(section);
+
+      try {
+        // Get first branch
+        const branchesRes = await fetch(`${API_BASE_URL}/branches?active=true`);
+        const branchesData = await branchesRes.json();
+        
+        let branches = branchesData.data?.branches || branchesData.data || branchesData.branches || [];
+        
+        if (branches.length === 0) {
+          section.innerHTML += '<div class="warning">Không tìm thấy chi nhánh nào</div>';
+          return;
+        }
+
+        const firstBranch = branches[0];
+        const branchId = firstBranch.id || firstBranch.branch_id;
+
+        log(`🏢 Testing với chi nhánh: ${firstBranch.name || firstBranch.branch_name} (ID: ${branchId})`, firstBranch);
+
+        const inventoryRes = await fetch(`${API_BASE_URL}/branches/${branchId}/inventory`);
+        const inventoryData = await inventoryRes.json();
+
+        log(`📦 RAW Inventory Data for Branch ${branchId}`, inventoryData);
+
+        // Extract inventory items
+        let items = [];
+        if (Array.isArray(inventoryData)) {
+          items = inventoryData;
+        } else if (inventoryData.data?.inventory) {
+          items = inventoryData.data.inventory;
+        } else if (inventoryData.data) {
+          items = Array.isArray(inventoryData.data) ? inventoryData.data : [];
+        }
+
+        const statsHtml = `
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">Số sản phẩm trong kho</div>
+              <div class="stat-value">${items.length}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Tổng số lượng</div>
+              <div class="stat-value">${items.reduce((sum, i) => sum + (i.quantity || i.stock || 0), 0)}</div>
+            </div>
+          </div>
+        `;
+
+        const inventorySection = document.createElement('div');
+        inventorySection.innerHTML = `
+          <h2>📦 Branch Inventory Analysis</h2>
+          ${statsHtml}
+          <pre>${JSON.stringify(items.slice(0, 10), null, 2)}</pre>
+        `;
+        resultsDiv.appendChild(inventorySection);
+
+      } catch (error) {
+        logError('❌ Error khi gọi Branch Inventory API', error);
+      }
+    }
+
+    async function testProductBatches() {
+      const section = document.createElement('div');
+      section.innerHTML = '<h2>⏳ Đang kiểm tra Product Batches...</h2>';
+      resultsDiv.appendChild(section);
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/product-batches?status=available&limit=50`);
+        const data = await response.json();
+
+        log('📦 RAW Product Batches Data', data);
+
+        let batches = [];
+        if (Array.isArray(data)) {
+          batches = data;
+        } else if (data.data?.batches) {
+          batches = data.data.batches;
+        } else if (data.data) {
+          batches = Array.isArray(data.data) ? data.data : [];
+        }
+
+        const totalQuantity = batches.reduce((sum, b) => sum + (b.quantity || 0), 0);
+
+        const statsHtml = `
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">Tổng số lô hàng</div>
+              <div class="stat-value">${batches.length}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Tổng số lượng trong lô</div>
+              <div class="stat-value">${totalQuantity}</div>
+            </div>
+          </div>
+        `;
+
+        const batchSection = document.createElement('div');
+        batchSection.innerHTML = `
+          <h2>📦 Product Batches Analysis</h2>
+          ${statsHtml}
+          <pre>${JSON.stringify(batches.slice(0, 10), null, 2)}</pre>
+        `;
+        resultsDiv.appendChild(batchSection);
+
+      } catch (error) {
+        logError('❌ Error khi gọi Product Batches API', error);
+      }
+    }
+
+    async function testAllAPIs() {
+      resultsDiv.innerHTML = '';
+      await testProductsAPI();
+      await testBranchInventory();
+      await testProductBatches();
+    }
+  </script>
+</body>
+</html>

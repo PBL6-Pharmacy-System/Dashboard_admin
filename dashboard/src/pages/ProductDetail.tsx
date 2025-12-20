@@ -203,7 +203,7 @@ const ProductDetail = () => {
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b border-blue-400">
                   <span className="text-blue-100">Tồn kho:</span>
-                  <span className="font-bold text-lg">{product.in_stock || product.stock || 0} {product.unittype?.name || 'đơn vị'}</span>
+                  <span className="font-bold text-lg">{product.total_stock ?? product.stock ?? 0} {product.unittype?.name || 'đơn vị'}</span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b border-blue-400">
                   <span className="text-blue-100">Giá bán:</span>

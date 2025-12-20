@@ -68,9 +68,15 @@ const handleResponse = async (response: Response, endpoint: string) => {
     throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
   }
   
+  // Handle 404 - Route not found
+  if (response.status === 404) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || `Route ${endpoint} không tồn tại`);
+  }
+  
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
   }
   
   // Check if response is JSON

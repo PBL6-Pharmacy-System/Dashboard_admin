@@ -1,18 +1,36 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, CheckCircle, XCircle, TruckIcon } from 'lucide-react';
+import { Plus, Eye, CheckCircle, XCircle } from 'lucide-react';
 import { supplierOrderService, type SupplierOrder } from '../services/supplierOrderService';
+import Toast from '../components/common/Toast';
+
+interface ToastData {
+  type: 'success' | 'error';
+  message: string;
+  description?: string;
+}
 
 const SupplierOrders = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState<SupplierOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [toast, setToast] = useState<ToastData | null>(null);
 
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus]);
+
+  // Auto dismiss toast after 5 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   const loadOrders = async () => {
     try {
@@ -27,7 +45,11 @@ const SupplierOrders = () => {
       // Check if backend returned error
       if (response.success === false) {
         console.error('❌ Backend error:', response.error);
-        alert(`Lỗi từ server: ${response.error || 'Không thể lấy danh sách đơn hàng'}`);
+        setToast({
+          type: 'error',
+          message: 'Lỗi tải dữ liệu',
+          description: response.error || 'Không thể lấy danh sách đơn hàng'
+        });
         setOrders([]);
         return;
       }
@@ -53,24 +75,62 @@ const SupplierOrders = () => {
   };
 
   const handleUpdateStatus = async (id: number, status: string) => {
-    if (confirm(`Xác nhận cập nhật trạng thái đơn thành "${status}"?`)) {
+    if (confirm(`Xác nhận cập nhật trạng thái đơn thành "${getStatusLabel(status)}"?`)) {
       try {
-        await supplierOrderService.updateOrderStatus(id, status);
-        loadOrders();
+        const response = await supplierOrderService.updateOrderStatus(id, status);
+        if (response.success) {
+          setToast({
+            type: 'success',
+            message: 'Cập nhật thành công',
+            description: `Đơn hàng đã chuyển sang trạng thái "${getStatusLabel(status)}"`
+          });
+          loadOrders();
+        } else {
+          setToast({
+            type: 'error',
+            message: 'Cập nhật thất bại',
+            description: response.error || 'Không thể cập nhật trạng thái'
+          });
+        }
       } catch (error) {
         console.error('Error updating order status:', error);
+        setToast({
+          type: 'error',
+          message: 'Lỗi hệ thống',
+          description: error instanceof Error ? error.message : 'Không thể cập nhật trạng thái đơn hàng'
+        });
       }
     }
   };
+
+
 
   const handleCancelOrder = async (id: number) => {
     const reason = prompt('Nhập lý do hủy đơn:');
     if (reason) {
       try {
-        await supplierOrderService.cancelOrder(id, reason);
-        loadOrders();
+        const response = await supplierOrderService.cancelOrder(id, reason);
+        if (response.success) {
+          setToast({
+            type: 'success',
+            message: 'Đã hủy đơn hàng',
+            description: reason
+          });
+          loadOrders();
+        } else {
+          setToast({
+            type: 'error',
+            message: 'Hủy đơn thất bại',
+            description: response.error || 'Không thể hủy đơn hàng'
+          });
+        }
       } catch (error) {
         console.error('Error cancelling order:', error);
+        setToast({
+          type: 'error',
+          message: 'Lỗi hệ thống',
+          description: error instanceof Error ? error.message : 'Không thể hủy đơn hàng'
+        });
       }
     }
   };
@@ -108,6 +168,15 @@ const SupplierOrders = () => {
 
   return (
     <div className="p-6">
+      {toast && (
+        <Toast
+          type={toast.type}
+          message={toast.message}
+          description={toast.description}
+          onClose={() => setToast(null)}
+        />
+      )}
+      
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Đơn đặt hàng Nhà cung cấp</h1>
         <p className="text-gray-600 mt-1">Quản lý đơn đặt hàng từ nhà cung cấp</p>
@@ -126,8 +195,6 @@ const SupplierOrders = () => {
                 <option value="draft">Nháp</option>
                 <option value="pending">Chờ duyệt</option>
                 <option value="approved">Đã duyệt</option>
-                <option value="shipped">Đang vận chuyển</option>
-                <option value="received">Đã nhận</option>
                 <option value="cancelled">Đã hủy</option>
               </select>
             </div>
@@ -222,29 +289,7 @@ const SupplierOrders = () => {
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'approved')}
                             className="p-2 text-green-600 hover:bg-green-50 rounded"
-                            title="Duyệt đơn"
-                          >
-                            <CheckCircle size={18} />
-                          </button>
-                        )}
-                        
-                        {/* Approved -> Shipped: Đang vận chuyển */}
-                        {order.status === 'approved' && (
-                          <button
-                            onClick={() => handleUpdateStatus(order.id, 'shipped')}
-                            className="p-2 text-purple-600 hover:bg-purple-50 rounded"
-                            title="Đánh dấu đang vận chuyển"
-                          >
-                            <TruckIcon size={18} />
-                          </button>
-                        )}
-                        
-                        {/* Shipped -> Received: Nhận hàng */}
-                        {order.status === 'shipped' && (
-                          <button
-                            onClick={() => handleUpdateStatus(order.id, 'received')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded"
-                            title="Xác nhận đã nhận hàng"
+                            title="Duyệt đơn đặt hàng"
                           >
                             <CheckCircle size={18} />
                           </button>

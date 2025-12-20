@@ -8,10 +8,24 @@ interface SupplierOrder {
   status: 'draft' | 'pending' | 'approved' | 'shipped' | 'received' | 'cancelled';
   total_amount: number;
   notes?: string;
+  note?: string;
   created_by: number;
   created_at: string;
   updated_at: string;
-  items?: SupplierOrderItem[];
+  expected_delivery_date?: string;
+  order_date?: string;
+  // Nested objects from backend
+  suppliers?: {
+    id: number;
+    name: string;
+  };
+  branches?: {
+    id: number;
+    name?: string;
+    branch_name?: string;
+  };
+  supplierOrderItem?: SupplierOrderItem[];
+  items?: SupplierOrderItem[]; // Backward compatibility
 }
 
 interface SupplierOrderItem {
@@ -19,11 +33,23 @@ interface SupplierOrderItem {
   supplier_order_id: number;
   product_id: number;
   quantity: number;
-  unit_cost: number;
-  total_cost: number;
+  unit_cost?: number;
+  unit_price?: number;
+  total_cost?: number;
+  subtotal?: number;
   received_quantity?: number;
   manufacturing_date?: string;
   expiry_date?: string;
+  products?: {
+    id: number;
+    name: string;
+    price: number;
+    image_url?: string;
+  };
+  product?: {
+    id: number;
+    name: string;
+  };
 }
 
 const supplierOrderService = {
@@ -85,13 +111,13 @@ const supplierOrderService = {
     }
     
     // Build payload with required fields from schema
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       supplier_id: data.supplier_id,
       branch_id: data.branch_id,
       total_amount: Math.round(totalAmount * 100) / 100,
       final_amount: Math.round(finalAmount * 100) / 100,
       items: data.items.map(item => {
-        const itemPayload: Record<string, any> = {
+        const itemPayload: Record<string, unknown> = {
           product_id: item.product_id,
           quantity: item.quantity,
           unit_price: Math.round(item.unit_cost * 100) / 100,
@@ -136,7 +162,7 @@ const supplierOrderService = {
     return api.post('/supplier-orders', payload);
   },
 
-  async updateOrderStatus(id: number, status: string, receivedItems?: any[]) {
+  async updateOrderStatus(id: number, status: string, receivedItems?: Array<Record<string, unknown>>) {
     return api.patch(`/supplier-orders/${id}/status`, { status, receivedItems });
   },
 

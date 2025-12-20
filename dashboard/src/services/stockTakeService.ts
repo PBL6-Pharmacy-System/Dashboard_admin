@@ -3,23 +3,56 @@ import { api } from './api';
 interface StockTake {
   id: number;
   branch_id: number;
-  stock_take_number: string;
+  stock_take_number?: string;
+  stock_take_no?: string;
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   notes?: string;
-  created_by: number;
+  note?: string;
+  created_by?: number;
+  started_by?: number;
   created_at: string;
   updated_at: string;
+  start_date?: string;
   completed_at?: string;
+  completion_date?: string;
+  // Nested objects from backend
+  branches?: {
+    id: number;
+    name?: string;
+    branch_name?: string;
+    address?: string;
+  };
+  users_stockTake_started_byTousers?: {
+    id: number;
+    username: string;
+    full_name?: string;
+  };
+  users_stockTake_completed_byTousers?: {
+    id: number;
+    username: string;
+    full_name?: string;
+  };
+  stockTakeItem?: StockTakeItem[];
 }
 
 interface StockTakeItem {
   id: number;
   stock_take_id: number;
   product_id: number;
-  expected_quantity: number;
+  expected_quantity?: number;
+  system_qty?: number;
   actual_quantity?: number;
+  actual_qty?: number;
   difference?: number;
+  variance?: number;
+  variance_value?: number;
   notes?: string;
+  products?: {
+    id: number;
+    name: string;
+    price: number;
+    image_url?: string;
+  };
 }
 
 const stockTakeService = {

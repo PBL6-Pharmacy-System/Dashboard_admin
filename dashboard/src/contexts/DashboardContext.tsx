@@ -248,8 +248,16 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
         setAnalytics(insightsArray);
         setErrors(prev => ({ ...prev, analytics: null }));
       } catch (err: unknown) {
-        console.error('❌ Error fetching analytics:', err);
         const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+        
+        // Check if it's a CORS error
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('CORS')) {
+          console.warn('⚠️ CORS error khi gọi analytics API - có thể do ngrok chưa config đúng');
+          console.warn('💡 Giải pháp: Kiểm tra backend có enable CORS cho ngrok domain');
+        } else {
+          console.error('❌ Error fetching analytics:', err);
+        }
+        
         setErrors(prev => ({ ...prev, analytics: errorMessage }));
         setAnalytics([]);
       } finally {
@@ -266,7 +274,7 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('[DashboardContext] Fetching branches...');
       
-      // Method 1: Try to get branches from analytics API
+      // Method 1: Try to get branches from analytics API (Skip if causing CORS)
       try {
         const analyticsRes = await dashboardService.getAnalytics(); // No branch_id
         console.log('[DashboardContext] Analytics response for branches:', analyticsRes);
@@ -289,7 +297,8 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       } catch (err) {
-        console.warn('[DashboardContext] Could not get branches from analytics:', err);
+        console.warn('[DashboardContext] Could not get branches from analytics (CORS or API error):', err);
+        // Don't throw - continue to fallback
       }
       
       // Method 2: Use mock data as fallback
