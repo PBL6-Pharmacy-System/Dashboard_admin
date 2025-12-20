@@ -10,11 +10,22 @@ interface ProductBatch {
   available_quantity: number;
   cost_price: number;
   manufacturing_date?: string;
-  expiry_date?: string;
+  expiry_date: string;
   supplier_id?: number;
   status: 'available' | 'reserved' | 'expired' | 'disposed';
   created_at: string;
   updated_at: string;
+  products?: {
+    product_id: number;
+    product_name: string;
+    name: string;
+    unit_of_measure: string;
+  };
+  branches?: {
+    branch_id: number;
+    branch_name: string;
+    name: string;
+  };
 }
 
 const batchService = {

@@ -289,7 +289,7 @@ const SupplierOrderDetail = () => {
                     active={['confirmed', 'shipped', 'delivered'].includes(order.status)}
                   />
                 )}
-                {order.status === 'shipped' || order.status === 'delivered' ? (
+                {order.status === 'received' ? (
                   <TimelineItem 
                     status="shipped"
                     label="Đang vận chuyển"
@@ -297,7 +297,7 @@ const SupplierOrderDetail = () => {
                     active
                   />
                 ) : null}
-                {order.status === 'delivered' && (
+                {order.status === 'received' && (
                   <TimelineItem 
                     status="delivered"
                     label="Đã giao hàng"
@@ -317,13 +317,13 @@ const SupplierOrderDetail = () => {
             </div>
 
             {/* Contact Info */}
-            {order.supplier?.contact_info && (
+            {order.suppliers?.contact_info && (
               <div className="bg-white rounded-2xl shadow-lg border-2 border-blue-100 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                   <User className="text-blue-600" />
                   Thông tin liên hệ
                 </h3>
-                <p className="text-gray-700">{order.supplier.contact_info}</p>
+                <p className="text-gray-700">{order.suppliers.contact_info}</p>
               </div>
             )}
           </div>

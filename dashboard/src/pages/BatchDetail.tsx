@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, Package, Calendar, MapPin, DollarSign, 
+  ArrowLeft, Package, Calendar, DollarSign, 
   AlertTriangle, TrendingUp, TrendingDown, Info, Trash2
 } from 'lucide-react';
 import { batchService, type ProductBatch } from '../services/batchService';
@@ -121,7 +121,7 @@ const BatchDetail = () => {
                 <Package className="text-blue-600" size={32} />
                 Chi tiết lô hàng
               </h1>
-              <p className="text-gray-500 mt-1">Mã lô: {batch.batch_code || batch.batch_number}</p>
+              <p className="text-gray-500 mt-1">Mã lô: {batch.batch_number}</p>
             </div>
           </div>
           
@@ -147,19 +147,19 @@ const BatchDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 <InfoItem 
                   label="Tên sản phẩm"
-                  value={batch.product?.name || batch.product?.product_name || `Product #${batch.product_id}`}
+                  value={batch.products?.product_name || batch.products?.name || `Product #${batch.product_id}`}
                 />
                 <InfoItem 
                   label="Đơn vị"
-                  value={batch.product?.unit_of_measure || 'N/A'}
+                  value={batch.products?.unit_of_measure || 'N/A'}
                 />
                 <InfoItem 
                   label="Chi nhánh"
-                  value={batch.branch?.branch_name || batch.branch?.name || `Branch #${batch.branch_id}`}
+                  value={batch.branches?.branch_name || batch.branches?.name || `Branch #${batch.branch_id}`}
                 />
                 <InfoItem 
                   label="Mã lô"
-                  value={batch.batch_code || batch.batch_number}
+                  value={batch.batch_number}
                 />
               </div>
             </div>
@@ -296,16 +296,7 @@ const BatchDetail = () => {
               </div>
             </div>
 
-            {/* Location */}
-            {batch.location && (
-              <div className="bg-white rounded-2xl shadow-lg border-2 border-blue-100 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <MapPin className="text-blue-600" />
-                  Vị trí trong kho
-                </h3>
-                <p className="text-2xl font-bold text-blue-600">{batch.location}</p>
-              </div>
-            )}
+            {/* Location - Not available in ProductBatch interface */}
 
             {/* Quick Stats */}
             <div className="bg-white rounded-2xl shadow-lg border-2 border-blue-100 p-6">

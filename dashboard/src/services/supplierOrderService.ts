@@ -18,6 +18,7 @@ interface SupplierOrder {
   suppliers?: {
     id: number;
     name: string;
+    contact_info?: string;
   };
   branches?: {
     id: number;

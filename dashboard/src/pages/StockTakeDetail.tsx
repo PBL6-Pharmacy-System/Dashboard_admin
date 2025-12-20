@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, ClipboardList, Package, Building2, Calendar,
+import {
+  ArrowLeft, ClipboardList, Package, Calendar, AlertCircle,
   CheckCircle, XCircle, Clock, AlertTriangle, Save, X
 } from 'lucide-react';
 import { stockTakeService, type StockTake, type StockTakeItem } from '../services/stockTakeService';

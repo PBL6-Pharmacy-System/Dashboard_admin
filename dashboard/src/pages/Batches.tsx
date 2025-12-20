@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Package, Calendar, AlertTriangle, Trash2, Eye } from 'lucide-react';
 import { batchService, type ProductBatch } from '../services/batchService';
 import { branchService } from '../services/branchService';
 
 const Batches = () => {
-  const navigate = useNavigate();
+
   const [batches, setBatches] = useState<ProductBatch[]>([]);
   const [branches, setBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
