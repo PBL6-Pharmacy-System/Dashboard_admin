@@ -86,7 +86,7 @@ export const dashboardService = {
   // 10. Lấy analytics insights từ AI
   async getAnalytics(branchId?: number): Promise<AnalyticsResponse> {
     const params = branchId ? `?branch_id=${branchId}` : '';
-    return api.get(`/admin/analytics${params}`, getAIBaseURL());
+    return api.get(`/api/admin/analytics${params}`, getAIBaseURL());
   },
 
   // 11. Lấy danh sách tất cả chi nhánh (sử dụng branch-sales API)
