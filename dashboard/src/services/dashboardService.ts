@@ -10,7 +10,6 @@ import type {
   ReviewsStatsResponse,
   RecentActivitiesResponse,
   AnalyticsResponse,
-  Branch,
 } from '../types/dashboard.types';
 
 export const dashboardService = {

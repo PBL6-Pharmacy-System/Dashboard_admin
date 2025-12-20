@@ -296,6 +296,14 @@ export interface AnalyticsResponse {
     insights: AnalyticsInsight[];
     summary?: string;
   };
+  insights?: AnalyticsInsight[] | Record<string, string>;
+  revenue?: {
+    by_branch: Array<{
+      branch_id: number;
+      branch_name?: string;
+      [key: string]: any;
+    }>
+  };
 }
 
 // Branch type
@@ -303,4 +311,16 @@ export interface Branch {
   branch_id: number;
   name: string;
   address?: string;
+}
+
+// Deals Table Data
+export interface DealData {
+  id: string;
+  productName: string;
+  productImage: string;
+  location: string;
+  dateTime: string;
+  piece: number;
+  amount: number;
+  status: string;
 }

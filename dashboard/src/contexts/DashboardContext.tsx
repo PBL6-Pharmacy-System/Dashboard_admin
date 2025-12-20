@@ -220,15 +220,15 @@ export const DashboardProvider = ({ children }: { children: ReactNode }) => {
             };
             
             // Convert object to array
-            insightsArray = Object.entries(insights)
+            insightsArray = (Object.entries(insights)
               .filter(([key, value]) => {
                 const isValid = typeof value === 'string' && value.length > 0;
                 if (!isValid) {
                   console.warn(`⚠️ Skipping invalid insight: ${key}`, typeof value);
                 }
                 return isValid;
-              })
-              .map(([key, value]) => {
+              }) as any)
+              .map(([key, value]: [string, any]) => {
                 const mapping = insightMapping[key] || { type: 'general', severity: 'info' };
                 return {
                   message: String(value),

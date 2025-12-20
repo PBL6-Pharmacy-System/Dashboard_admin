@@ -5,7 +5,7 @@ interface SupplierOrder {
   supplier_id: number;
   branch_id: number;
   order_number: string;
-  status: 'pending' | 'approved' | 'shipped' | 'received' | 'cancelled';
+  status: 'draft' | 'pending' | 'approved' | 'shipped' | 'received' | 'cancelled';
   total_amount: number;
   notes?: string;
   created_by: number;

@@ -123,6 +123,7 @@ const SupplierOrders = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Tất cả trạng thái</option>
+                <option value="draft">Nháp</option>
                 <option value="pending">Chờ duyệt</option>
                 <option value="approved">Đã duyệt</option>
                 <option value="shipped">Đang vận chuyển</option>
@@ -205,7 +206,7 @@ const SupplierOrders = () => {
                           <Eye size={18} />
                         </button>
                         
-                        {/* Draft -> Pending: Gửi đơn
+                        {/* Draft -> Pending: Gửi đơn */}
                         {order.status === 'draft' && (
                           <button
                             onClick={() => handleUpdateStatus(order.id, 'pending')}
@@ -214,7 +215,7 @@ const SupplierOrders = () => {
                           >
                             <CheckCircle size={18} />
                           </button>
-                        )} */}
+                        )}
                         
                         {/* Pending -> Approved: Duyệt đơn */}
                         {order.status === 'pending' && (

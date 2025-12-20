@@ -31,7 +31,7 @@ export const useToast = () => {
 
   // Register global toast function
   if (globalToastFn === null) {
-    globalToastFn = showToast;
+    globalToastFn = (data: ToastData) => showToast(data.type, data.message, data.description);
   }
 
   return { toast, showToast, hideToast };

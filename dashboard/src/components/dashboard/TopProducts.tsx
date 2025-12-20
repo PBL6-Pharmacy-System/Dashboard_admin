@@ -31,7 +31,6 @@ const CustomYAxisTick = (props: any) => {
         fill="#4B5563"
         fontSize="11"
         fontWeight="500"
-        title={payload.value}
       >
         {shortName}
       </text>
