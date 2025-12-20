@@ -1,16 +1,16 @@
-import { api, getAIBaseURL } from './api';
 import type {
-  RevenueResponse,
-  TopProductsResponse,
+  AnalyticsResponse,
+  BranchSalesResponse,
+  InventoryStatsResponse,
   OrdersStatsResponse,
   OverviewResponse,
-  InventoryStatsResponse,
-  BranchSalesResponse,
   PromotionsStatsResponse,
-  ReviewsStatsResponse,
   RecentActivitiesResponse,
-  AnalyticsResponse,
+  RevenueResponse,
+  ReviewsStatsResponse,
+  TopProductsResponse,
 } from '../types/dashboard.types';
+import { api, getAIBaseURL } from './api';
 
 export const dashboardService = {
   // 1. Lấy dữ liệu doanh thu theo ngày
@@ -86,7 +86,7 @@ export const dashboardService = {
   // 10. Lấy analytics insights từ AI
   async getAnalytics(branchId?: number): Promise<AnalyticsResponse> {
     const params = branchId ? `?branch_id=${branchId}` : '';
-    return api.get(`/api/admin/analytics${params}`, getAIBaseURL());
+    return api.get(`/admin/analytics${params}`, getAIBaseURL());
   },
 
   // 11. Lấy danh sách tất cả chi nhánh (sử dụng branch-sales API)
