@@ -90,13 +90,35 @@ const BranchDetail = () => {
     );
   }
 
-  const totalInventoryValue = inventory.reduce((sum, item) => {
+  // Tính giá trị tồn kho từ branchinventory hoặc inventory
+  const inventoryData = branch.branchinventory || inventory;
+  console.log('📊 Inventory data for value calculation:', {
+    source: branch.branchinventory ? 'branchinventory' : 'inventory',
+    count: inventoryData.length,
+    sample: inventoryData[0]
+  });
+  
+  const totalInventoryValue = inventoryData.reduce((sum, item) => {
     const quantity = item.quantity || item.stock || 0;
-    const price = parseFloat(item.product?.price || 0);
+    const product = item.products || item.product;
+    // Try multiple price fields
+    const priceStr = product?.price || product?.retail_price || '0';
+    const price = typeof priceStr === 'string' ? parseFloat(priceStr) : Number(priceStr) || 0;
+    
+    if (quantity > 0 && price > 0) {
+      console.log('💰 Item value:', { 
+        product: product?.name, 
+        quantity, 
+        price, 
+        total: quantity * price 
+      });
+    }
     return sum + (quantity * price);
   }, 0);
 
-  const lowStockItems = inventory.filter(item => 
+  console.log('💵 Total inventory value:', totalInventoryValue);
+
+  const lowStockItems = inventoryData.filter(item => 
     (item.quantity || item.stock || 0) < (item.min_stock || 50)
   );
 
@@ -254,16 +276,16 @@ const BranchDetail = () => {
               <div className="space-y-4">
                 <StatCard 
                   label="Tổng sản phẩm"
-                  value={inventory.length.toString()}
+                  value={(branch.stats?.totalProducts || inventory.length).toString()}
                 />
                 <StatCard 
                   label="Tổng số lượng"
-                  value={inventory.reduce((sum, i) => sum + (i.quantity || i.stock || 0), 0).toLocaleString()}
+                  value={(branch.stats?.totalStock || inventory.reduce((sum, i) => sum + (i.quantity || i.stock || 0), 0)).toLocaleString()}
                 />
                 <StatCard 
                   label="Sản phẩm thiếu"
-                  value={lowStockItems.length.toString()}
-                  highlight={lowStockItems.length > 0}
+                  value={(branch.stats?.lowStockCount || lowStockItems.length).toString()}
+                  highlight={(branch.stats?.lowStockCount || lowStockItems.length) > 0}
                 />
               </div>
             </div>
@@ -314,15 +336,24 @@ const BranchDetail = () => {
               <h3 className="text-lg font-bold text-gray-900 mb-4">Hành động</h3>
               
               <div className="space-y-2">
-                <button className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-semibold transition-all border border-blue-200 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => navigate('/dashboard/supplier-orders')}
+                  className="w-full px-4 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-semibold transition-all border border-blue-200 flex items-center justify-center gap-2"
+                >
                   <TrendingUp className="w-4 h-4" />
                   Nhập hàng
                 </button>
-                <button className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-semibold transition-all border border-orange-200 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => navigate('/dashboard/stock-takes')}
+                  className="w-full px-4 py-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg font-semibold transition-all border border-orange-200 flex items-center justify-center gap-2"
+                >
                   <Package className="w-4 h-4" />
                   Kiểm kê
                 </button>
-                <button className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-semibold transition-all border border-purple-200 flex items-center justify-center gap-2">
+                <button 
+                  onClick={() => navigate('/dashboard/staff')}
+                  className="w-full px-4 py-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-semibold transition-all border border-purple-200 flex items-center justify-center gap-2"
+                >
                   <Users className="w-4 h-4" />
                   Quản lý nhân viên
                 </button>

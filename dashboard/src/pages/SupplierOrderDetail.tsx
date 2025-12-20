@@ -178,7 +178,11 @@ const SupplierOrderDetail = () => {
               {order.notes && (
                 <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
                   <p className="text-sm font-semibold text-yellow-800 mb-1">Ghi chú:</p>
-                  <p className="text-yellow-700">{order.notes}</p>
+                  <p className="text-yellow-700">
+                    {typeof order.notes === 'object' 
+                      ? JSON.stringify(order.notes) 
+                      : order.notes}
+                  </p>
                 </div>
               )}
             </div>
@@ -209,7 +213,13 @@ const SupplierOrderDetail = () => {
                         <tr key={item.id} className="hover:bg-blue-50 transition-colors">
                           <td className="py-4 px-6">
                             <div>
-                              <p className="font-semibold text-gray-900">{item.products?.name || `Product #${item.product_id}`}</p>
+                              <p className="font-semibold text-gray-900">
+                                {item.products?.name 
+                                  ? (typeof item.products.name === 'object' 
+                                    ? JSON.stringify(item.products.name) 
+                                    : item.products.name)
+                                  : `Product #${item.product_id}`}
+                              </p>
                               <p className="text-sm text-gray-500">ID: {item.product_id}</p>
                             </div>
                           </td>
@@ -323,7 +333,11 @@ const SupplierOrderDetail = () => {
                   <User className="text-blue-600" />
                   Thông tin liên hệ
                 </h3>
-                <p className="text-gray-700">{order.suppliers.contact_info}</p>
+                <p className="text-gray-700">
+                  {typeof order.suppliers.contact_info === 'object' 
+                    ? JSON.stringify(order.suppliers.contact_info) 
+                    : order.suppliers.contact_info}
+                </p>
               </div>
             )}
           </div>
@@ -334,12 +348,14 @@ const SupplierOrderDetail = () => {
 };
 
 // Helper Components
-const InfoItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) => (
+const InfoItem = ({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) => (
   <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
     <div className="mt-0.5">{icon}</div>
     <div>
       <p className="text-xs text-gray-500 font-medium mb-1">{label}</p>
-      <p className="font-semibold text-gray-900">{value}</p>
+      <p className="font-semibold text-gray-900">
+        {typeof value === 'object' ? JSON.stringify(value) : value}
+      </p>
     </div>
   </div>
 );
