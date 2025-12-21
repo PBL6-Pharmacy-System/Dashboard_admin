@@ -15,7 +15,8 @@ import {
   BarChart3,
   ShoppingBag,
   UserCog,
-  Zap
+  Zap,
+  Ship
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
@@ -61,9 +62,10 @@ const Sidebar = () => {
     { icon: Zap, label: 'Flash Sales', path: '/dashboard/flash-sale', adminOnly: false },
     { icon: Warehouse, label: 'Tồn kho hàng', path: '/dashboard/stock', adminOnly: false },
     { icon: ClipboardList, label: 'Phiếu tồn kho', path: '/dashboard/stock-slips', adminOnly: false },
-    { icon: MapPin, label: 'Chi nhánh', path: '/dashboard/branches', adminOnly: false },
+    { icon: MapPin, label: 'Chi nhánh', path: '/dashboard/branches', adminOnly: true },
     { icon: PackageSearch, label: 'Lô hàng', path: '/dashboard/batches', adminOnly: false },
     { icon: ShoppingBag, label: 'Đơn hàng nhà cung cấp', path: '/dashboard/supplier-orders', adminOnly: false },
+    { icon: Ship, label: 'Giao hàng', path: '/dashboard/shipments', adminOnly: false },
     { icon: FileText, label: 'Kiểm kê', path: '/dashboard/stock-takes', adminOnly: false },
     { icon: TruckIcon, label: 'Chuyển kho', path: '/dashboard/stock-transfer', adminOnly: false },
     { icon: BarChart3, label: 'Báo cáo tồn kho', path: '/dashboard/inventory-reports', adminOnly: false },

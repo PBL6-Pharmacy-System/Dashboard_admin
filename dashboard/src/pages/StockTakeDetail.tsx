@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ClipboardList, Package, Calendar, AlertCircle,
@@ -12,7 +12,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 const StockTakeDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { success, error: showError } = useToast();
+  const { success, error: showError, warning: showWarning } = useToast();
   const { confirm, confirmState, handleConfirm, handleCancel: handleConfirmCancel } = useConfirm();
   const [stockTake, setStockTake] = useState<StockTake | null>(null);
   const [items, setItems] = useState<StockTakeItem[]>([]);
@@ -68,24 +68,66 @@ const StockTakeDetail = () => {
     if (!stockTake) return;
     
     try {
+      // ✅ OPTIMISTIC UPDATE: Update UI immediately without waiting for API
+      setItems(prevItems => 
+        prevItems.map(item => {
+          if (item.id === itemId) {
+            const expectedQty = item.system_qty ?? item.expected_quantity ?? 0;
+            const variance = actualQuantity - expectedQty;
+            return {
+              ...item,
+              actual_qty: actualQuantity,
+              actual_quantity: actualQuantity,
+              variance: variance,
+              difference: variance
+            };
+          }
+          return item;
+        })
+      );
+
+      // Call API in background without blocking UI
       await stockTakeService.updateStockTakeItem(stockTake.id, itemId, {
         actual_quantity: actualQuantity
       });
       
-      // Reload data
-      loadStockTakeDetail(id!);
+      // ❌ REMOVED: loadStockTakeDetail(id!) - No longer needed!
+      // UI already updated, no need to reload everything
+      
     } catch (err) {
       console.error('Error updating item:', err);
       showError('Không thể cập nhật số lượng');
+      
+      // ✅ ROLLBACK: If API fails, reload to get correct data
+      loadStockTakeDetail(id!);
     }
   };
 
   const handleComplete = async () => {
     if (!stockTake) return;
     
+    // Kiểm tra số lượng sản phẩm chưa kiểm kê
+    const uncheckedItems = items.filter(item => {
+      const actualQty = item.actual_qty ?? item.actual_quantity;
+      return actualQty === null || actualQty === undefined;
+    });
+    
+    const uncheckedCount = uncheckedItems.length;
+    const totalItems = items.length;
+    const checkedCount = totalItems - uncheckedCount;
+    
+    // Nếu có sản phẩm chưa kiểm kê, hiển thị cảnh báo
+    if (uncheckedCount > 0) {
+      showWarning(
+        `Còn ${uncheckedCount} sản phẩm chưa được kiểm kê!`,
+        `Đã kiểm kê: ${checkedCount}/${totalItems} sản phẩm. Vui lòng kiểm kê đầy đủ trước khi hoàn thành.`
+      );
+      return; // Không cho phép hoàn thành
+    }
+    
     const confirmed = await confirm({
       title: 'Xác nhận hoàn thành',
-      message: 'Xác nhận hoàn thành kiểm kê?\nHành động này không thể hoàn tác.',
+      message: `Xác nhận hoàn thành kiểm kê ${totalItems} sản phẩm?\nHành động này không thể hoàn tác.`,
       type: 'warning',
       confirmText: 'Hoàn thành',
       cancelText: 'Hủy'
@@ -96,7 +138,7 @@ const StockTakeDetail = () => {
     try {
       await stockTakeService.completeStockTake(stockTake.id);
       loadStockTakeDetail(id!);
-      success('Đã hoàn thành kiểm kê');
+      success('Đã hoàn thành kiểm kê thành công!');
     } catch (err) {
       console.error('Error completing stock take:', err);
       showError('Không thể hoàn thành kiểm kê');
@@ -222,7 +264,7 @@ const StockTakeDetail = () => {
                 Phiếu kiểm kê #{stockTake.id}
               </h1>
               <p className="text-gray-500 mt-1">
-                {stockTake.stock_take_number || `STK-${stockTake.id}`}
+                {stockTake.stock_take_number || stockTake.stock_take_no || `STK-${stockTake.id}`}
               </p>
             </div>
           </div>
@@ -253,7 +295,7 @@ const StockTakeDetail = () => {
                 />
                 <InfoItem 
                   label="Ngày tạo"
-                  value={new Date(stockTake.created_at).toLocaleString('vi-VN')}
+                  value={new Date(stockTake.created_at || stockTake.start_date).toLocaleString('vi-VN')}
                 />
                 <InfoItem 
                   label="Người tạo"
@@ -265,10 +307,10 @@ const StockTakeDetail = () => {
                 />
               </div>
 
-              {stockTake.notes && (
+              {(stockTake.notes || stockTake.note) && (
                 <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-lg">
                   <p className="text-sm font-semibold text-yellow-800 mb-1">Ghi chú:</p>
-                  <p className="text-yellow-700">{stockTake.notes}</p>
+                  <p className="text-yellow-700">{stockTake.notes || stockTake.note}</p>
                 </div>
               )}
             </div>
@@ -435,12 +477,18 @@ const StockTakeDetail = () => {
               <div className="space-y-3">
                 <TimelineItem 
                   label="Tạo phiếu"
-                  date={stockTake.created_at}
+                  date={stockTake.created_at || stockTake.start_date}
                 />
                 {stockTake.status !== 'pending' && (
                   <TimelineItem 
                     label="Cập nhật"
                     date={stockTake.updated_at}
+                  />
+                )}
+                {(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date) && (
+                  <TimelineItem 
+                    label="Hoàn thành"
+                    date={stockTake.completed_at || stockTake.complete_date || stockTake.completion_date}
                   />
                 )}
               </div>
@@ -479,11 +527,44 @@ const ItemRow = ({
   const actualQty = item.actual_qty ?? item.actual_quantity;
   const expectedQty = item.system_qty ?? item.expected_quantity ?? 0;
   const [inputValue, setInputValue] = useState(actualQty?.toString() || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-save with debounce khi user nhập xong
+  useEffect(() => {
+    if (!editing) return;
+    
+    // Clear timeout cũ
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Nếu input value khác với actual qty hiện tại, đặt timeout để save
+    const qty = parseInt(inputValue);
+    if (!isNaN(qty) && qty !== actualQty) {
+      setIsSaving(true);
+      saveTimeoutRef.current = setTimeout(() => {
+        onUpdate(item.id, qty);
+        setIsSaving(false);
+      }, 800); // Đợi 800ms sau khi user ngừng nhập
+    }
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [inputValue, editing, actualQty, item.id, onUpdate]);
 
   const handleSave = () => {
     const qty = parseInt(inputValue);
     if (!isNaN(qty)) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      setIsSaving(true);
       onUpdate(item.id, qty);
+      setTimeout(() => setIsSaving(false), 500);
     }
   };
 
@@ -503,15 +584,27 @@ const ItemRow = ({
       <td className="py-4 px-6 text-center">
         {editing ? (
           <div className="flex items-center gap-2 justify-center">
-            <input
-              type="number"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              className="w-20 px-2 py-1 border border-gray-300 rounded text-center"
-            />
+            <div className="relative">
+              <input
+                type="number"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className={`w-20 px-2 py-1 border rounded text-center transition-colors ${
+                  isSaving ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
+                }`}
+                placeholder="0"
+              />
+              {isSaving && (
+                <div className="absolute -right-6 top-1/2 -translate-y-1/2">
+                  <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                </div>
+              )}
+            </div>
             <button
               onClick={handleSave}
-              className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+              disabled={isSaving}
+              className="p-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Lưu ngay (hoặc đợi 0.8s để tự động lưu)"
             >
               <Save size={16} />
             </button>

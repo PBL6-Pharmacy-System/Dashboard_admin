@@ -14,6 +14,8 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState<number | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
+  const [selectedBatch, setSelectedBatch] = useState<ProductBatch | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   // const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -119,6 +121,26 @@ const Batches = () => {
       } catch (error) {
         console.error('Error disposing batch:', error);
       }
+    }
+  };
+
+  const handleViewDetail = async (id: number) => {
+    try {
+      setLoading(true);
+      const response = await batchService.getBatchById(id);
+      console.log('📦 Batch detail:', response);
+      
+      if (response.success && response.data) {
+        setSelectedBatch(response.data);
+        setShowDetailModal(true);
+      } else {
+        showError('Không thể tải thông tin chi tiết lô hàng');
+      }
+    } catch (error) {
+      console.error('Error loading batch detail:', error);
+      showError('Lỗi khi tải chi tiết lô hàng');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -293,6 +315,7 @@ const Batches = () => {
                           </button>
                         )}
                         <button
+                          onClick={() => handleViewDetail(batch.id)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                           title="Chi tiết"
                         >
@@ -314,6 +337,145 @@ const Batches = () => {
           )}
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {showDetailModal && selectedBatch && (
+        <div className="fixed inset-0 backdrop-blur-md bg-white/30 bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Chi tiết Lô hàng</h2>
+                  <p className="text-gray-600 mt-1">Mã lô: {selectedBatch.batch_number}</p>
+                </div>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Thông tin sản phẩm */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Thông tin sản phẩm</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Tên sản phẩm</p>
+                      <p className="font-medium">{selectedBatch.products?.name || selectedBatch.products?.product_name || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Đơn vị tính</p>
+                      <p className="font-medium">{selectedBatch.products?.unit_of_measure || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thông tin lô hàng */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Thông tin lô hàng</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Mã lô</p>
+                      <p className="font-medium">{selectedBatch.batch_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Chi nhánh</p>
+                      <p className="font-medium">{selectedBatch.branches?.name || selectedBatch.branches?.branch_name || `Branch #${selectedBatch.branch_id}`}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Trạng thái</p>
+                      <span className={`inline-block px-2 py-1 text-xs rounded-full ${getStatusColor(selectedBatch.status)}`}>
+                        {getStatusLabel(selectedBatch.status)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Giá nhập</p>
+                      <p className="font-medium">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(selectedBatch.cost_price || 0)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Số lượng */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Số lượng</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-white p-3 rounded">
+                      <p className="text-sm text-gray-600">Tổng số lượng</p>
+                      <p className="text-2xl font-bold text-blue-600">{selectedBatch.quantity}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded">
+                      <p className="text-sm text-gray-600">Đã đặt trước</p>
+                      <p className="text-2xl font-bold text-yellow-600">{selectedBatch.reserved_quantity || 0}</p>
+                    </div>
+                    <div className="bg-white p-3 rounded">
+                      <p className="text-sm text-gray-600">Sẵn có</p>
+                      <p className="text-2xl font-bold text-green-600">{selectedBatch.available_quantity}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ngày tháng */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Ngày sản xuất & Hạn sử dụng</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Ngày sản xuất</p>
+                      <p className="font-medium flex items-center gap-2">
+                        <Calendar size={16} />
+                        {selectedBatch.manufacturing_date ? new Date(selectedBatch.manufacturing_date).toLocaleDateString('vi-VN') : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Hạn sử dụng</p>
+                      <p className={`font-medium flex items-center gap-2 ${
+                        isExpired(selectedBatch.expiry_date) ? 'text-red-600' : 
+                        isExpiringSoon(selectedBatch.expiry_date) ? 'text-yellow-600' : ''
+                      }`}>
+                        <Calendar size={16} />
+                        {selectedBatch.expiry_date ? new Date(selectedBatch.expiry_date).toLocaleDateString('vi-VN') : 'N/A'}
+                        {isExpired(selectedBatch.expiry_date) && (
+                          <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Đã hết hạn</span>
+                        )}
+                        {isExpiringSoon(selectedBatch.expiry_date) && !isExpired(selectedBatch.expiry_date) && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Sắp hết hạn</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timestamps */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">Thông tin hệ thống</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600">Ngày tạo</p>
+                      <p className="font-medium">{new Date(selectedBatch.created_at).toLocaleString('vi-VN')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Cập nhật lần cuối</p>
+                      <p className="font-medium">{new Date(selectedBatch.updated_at).toLocaleString('vi-VN')}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

@@ -137,3 +137,5 @@ export const api = {
 
 // Export AI Base URL for use in services
 export const getAIBaseURL = () => AI_BASE_URL;
+
+export default api;

@@ -222,11 +222,13 @@ const StockTakes = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <ClipboardList size={16} className="text-gray-400" />
-                        <span className="font-medium text-gray-900">{stockTake.stock_take_number}</span>
+                        <span className="font-medium text-gray-900">
+                          {stockTake.stock_take_number || stockTake.stock_take_no || `ST-${stockTake.id}`}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      Branch #{stockTake.branch_id}
+                      {stockTake.branches?.name || stockTake.branches?.branch_name || `Branch #${stockTake.branch_id}`}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(stockTake.status)}`}>
@@ -234,11 +236,11 @@ const StockTakes = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(stockTake.created_at).toLocaleDateString('vi-VN')}
+                      {new Date(stockTake.created_at || stockTake.start_date).toLocaleDateString('vi-VN')}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {stockTake.completed_at 
-                        ? new Date(stockTake.completed_at).toLocaleDateString('vi-VN')
+                      {(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date)
+                        ? new Date(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date).toLocaleDateString('vi-VN')
                         : '-'
                       }
                     </td>

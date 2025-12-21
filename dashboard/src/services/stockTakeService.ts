@@ -90,7 +90,12 @@ const stockTakeService = {
     actual_quantity: number;
     notes?: string;
   }) {
-    return api.put(`/stock-takes/${stockTakeId}/items/${itemId}`, data);
+    // Backend expects actual_qty, not actual_quantity
+    const payload = {
+      actual_qty: data.actual_quantity,
+      note: data.notes
+    };
+    return api.put(`/stock-takes/${stockTakeId}/items/${itemId}`, payload);
   },
 
   async completeStockTake(id: number) {

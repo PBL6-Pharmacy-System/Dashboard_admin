@@ -29,6 +29,7 @@ import CreateStockTake from './pages/CreateStockTake';
 import StockTakeDetail from './pages/StockTakeDetail';
 import InventoryReports from './pages/InventoryReports';
 import FlashSale from './pages/FlashSale';
+import Shipments from './pages/Shipments';
 import Toast from './components/common/Toast';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import ChatBox from './components/ChatBox';
@@ -142,6 +143,7 @@ function App() {
           <Route path="stock-takes/:id" element={<ErrorBoundary><StockTakeDetail /></ErrorBoundary>} />
           <Route path="inventory-reports" element={<ErrorBoundary><InventoryReports /></ErrorBoundary>} />
           <Route path="flash-sale" element={<ErrorBoundary><FlashSale /></ErrorBoundary>} />
+          <Route path="shipments" element={<ErrorBoundary><Shipments /></ErrorBoundary>} />
         </Route>
 
         {/* 404 Route */}

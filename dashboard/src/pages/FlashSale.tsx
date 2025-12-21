@@ -19,7 +19,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import FlashSaleProductTable from '../components/flashsale/FlashSaleProductTable';
 import ProductSelectionModal from '../components/flashsale/ProductSelectionModal';
 
-type ViewMode = 'list' | 'create' | 'edit';
+type ViewMode = 'list' | 'create' | 'edit' | 'view';
 
 const FlashSale: React.FC = () => {
   const { showToast } = useToast();
@@ -162,12 +162,9 @@ const FlashSale: React.FC = () => {
     setViewMode('create');
   };
 
-  const handleEdit = async (id: number) => {
+  const loadFlashSaleData = async (id: number) => {
     try {
       setLoadingForm(true);
-      setViewMode('edit');
-      setEditingId(id);
-      
       const data = await getFlashSaleById(id);
       
       setFormData({
@@ -177,29 +174,46 @@ const FlashSale: React.FC = () => {
         end_time: new Date(data.end_time).toISOString().slice(0, 16),
         is_active: data.is_active,
         products: Array.isArray(data.products) ? data.products.map(p => {
-          // Parse price safely if it's a string
-          const priceStr = typeof p.product?.price === 'string' ? p.product?.price : String(p.product?.price || 0);
-          const price = parseFloat(priceStr.replace(/[^0-9.]/g, ''));
+          // Parse price safely
+          let price = 0;
+          if (p.product?.price) {
+            const priceStr = typeof p.product.price === 'string' ? p.product.price : String(p.product.price);
+            price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
+          }
           
           return {
             product_id: p.product_id,
-            flash_price: p.flash_price,
-            stock_limit: p.stock_limit,
-            purchase_limit: p.purchase_limit,
-            product_name: p.product?.name,
-            product_price: price || 0,
+            flash_price: Number(p.flash_price) || 0,
+            stock_limit: Number(p.stock_limit) || 0,
+            purchase_limit: Number(p.purchase_limit) || 1,
+            product_name: p.product?.name || 'N/A',
+            product_price: price,
             product_stock: p.product?.stock || 0,
             product_image: p.product?.image,
             product_sku: p.product?.sku
           };
         }) : []
       });
+      return data;
     } catch {
       showToast('error', 'Không thể tải thông tin Flash Sale');
       setViewMode('list');
+      throw new Error('Failed to load flash sale');
     } finally {
       setLoadingForm(false);
     }
+  };
+
+  const handleView = async (id: number) => {
+    setViewMode('view');
+    setEditingId(id);
+    await loadFlashSaleData(id);
+  };
+
+  const handleEdit = async (id: number) => {
+    setViewMode('edit');
+    setEditingId(id);
+    await loadFlashSaleData(id);
   };
 
   const handleBackToList = () => {
@@ -502,6 +516,16 @@ const FlashSale: React.FC = () => {
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
+                          onClick={() => handleView(flashSale.id)}
+                          className="text-gray-600 hover:text-gray-800 p-2 rounded hover:bg-gray-50"
+                          title="Xem chi tiết"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => handleEdit(flashSale.id)}
                           className="text-blue-600 hover:text-blue-800 p-2 rounded hover:bg-blue-50"
                           title="Chỉnh sửa"
@@ -554,6 +578,8 @@ const FlashSale: React.FC = () => {
       );
     }
 
+    const isViewMode = viewMode === 'view';
+
     return (
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -567,9 +593,22 @@ const FlashSale: React.FC = () => {
             </svg>
             Quay lại
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">
-            {viewMode === 'edit' ? 'Chỉnh sửa Flash Sale' : 'Tạo Flash Sale mới'}
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-800">
+              {isViewMode ? 'Chi tiết Flash Sale' : viewMode === 'edit' ? 'Chỉnh sửa Flash Sale' : 'Tạo Flash Sale mới'}
+            </h1>
+            {isViewMode && (
+              <button
+                onClick={() => editingId && handleEdit(editingId)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Chỉnh sửa
+              </button>
+            )}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -581,16 +620,20 @@ const FlashSale: React.FC = () => {
               {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tên chương trình <span className="text-red-500">*</span>
+                  Tên chương trình {!isViewMode && <span className="text-red-500">*</span>}
                 </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="VD: Sale 12.12 Khung giờ vàng"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
+                {isViewMode ? (
+                  <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-900">{formData.name}</p>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="VD: Sale 12.12 Khung giờ vàng"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                  />
+                )}
               </div>
 
               {/* Description */}
@@ -598,46 +641,64 @@ const FlashSale: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Mô tả
                 </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="Mô tả chi tiết về chương trình Flash Sale..."
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+                {isViewMode ? (
+                  <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-900 whitespace-pre-wrap">
+                    {formData.description || 'Không có mô tả'}
+                  </p>
+                ) : (
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    placeholder="Mô tả chi tiết về chương trình Flash Sale..."
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                )}
               </div>
 
               {/* Time Range */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thời gian bắt đầu <span className="text-red-500">*</span>
+                    Thời gian bắt đầu {!isViewMode && <span className="text-red-500">*</span>}
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.start_time}
-                    onChange={(e) => handleInputChange('start_time', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+                  {isViewMode ? (
+                    <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-900">
+                      {formatDateTime(new Date(formData.start_time).toISOString())}
+                    </p>
+                  ) : (
+                    <input
+                      type="datetime-local"
+                      value={formData.start_time}
+                      onChange={(e) => handleInputChange('start_time', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Thời gian kết thúc <span className="text-red-500">*</span>
+                    Thời gian kết thúc {!isViewMode && <span className="text-red-500">*</span>}
                   </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.end_time}
-                    onChange={(e) => handleInputChange('end_time', e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
+                  {isViewMode ? (
+                    <p className="px-4 py-2 bg-gray-50 rounded-lg text-gray-900">
+                      {formatDateTime(new Date(formData.end_time).toISOString())}
+                    </p>
+                  ) : (
+                    <input
+                      type="datetime-local"
+                      value={formData.end_time}
+                      onChange={(e) => handleInputChange('end_time', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  )}
                 </div>
               </div>
 
               {/* Time Slot Error */}
-              {timeSlotError && (
+              {!isViewMode && timeSlotError && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -648,16 +709,29 @@ const FlashSale: React.FC = () => {
 
               {/* Status */}
               <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => handleInputChange('is_active', e.target.checked)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <label htmlFor="is_active" className="ml-2 text-sm font-medium text-gray-700">
-                  Kích hoạt Flash Sale
-                </label>
+                {isViewMode ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-700">Trạng thái:</span>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                      formData.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {formData.is_active ? 'Đang kích hoạt' : 'Không kích hoạt'}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={formData.is_active}
+                      onChange={(e) => handleInputChange('is_active', e.target.checked)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="is_active" className="ml-2 text-sm font-medium text-gray-700">
+                      Kích hoạt Flash Sale
+                    </label>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -673,53 +747,60 @@ const FlashSale: React.FC = () => {
                   {formData.products.length} sản phẩm được chọn
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowProductModal(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Thêm sản phẩm
-              </button>
+              {!isViewMode && (
+                <button
+                  type="button"
+                  onClick={() => setShowProductModal(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Thêm sản phẩm
+                </button>
+              )}
             </div>
 
             <FlashSaleProductTable
               products={formData.products}
               onChange={handleProductsChange}
+              readOnly={isViewMode}
             />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={handleBackToList}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {saving && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              )}
-              {saving ? 'Đang lưu...' : 'Lưu lại'}
-            </button>
-          </div>
+          {!isViewMode && (
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {saving && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                {saving ? 'Đang lưu...' : 'Lưu lại'}
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Product Selection Modal */}
-        <ProductSelectionModal
-          isOpen={showProductModal}
-          onClose={() => setShowProductModal(false)}
-          onSelect={handleAddProducts}
-          selectedProductIds={formData.products.map(p => p.product_id)}
-        />
+        {!isViewMode && (
+          <ProductSelectionModal
+            isOpen={showProductModal}
+            onClose={() => setShowProductModal(false)}
+            onSelect={handleAddProducts}
+            selectedProductIds={formData.products.map(p => p.product_id)}
+          />
+        )}
       </div>
     );
   };

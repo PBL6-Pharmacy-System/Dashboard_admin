@@ -4,9 +4,10 @@ import type { FlashSaleProductInput } from '../../types/flashsale.types';
 interface FlashSaleProductTableProps {
   products: FlashSaleProductInput[];
   onChange: (products: FlashSaleProductInput[]) => void;
+  readOnly?: boolean;
 }
 
-const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products, onChange }) => {
+const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products, onChange, readOnly = false }) => {
   const calculateDiscount = (originalPrice: number, flashPrice: number): string => {
     if (!originalPrice || originalPrice === 0) return '0%';
     const discount = ((originalPrice - flashPrice) / originalPrice) * 100;
@@ -86,9 +87,11 @@ const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products,
             <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
               Giới hạn mua
             </th>
-            <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Hành động
-            </th>
+            {!readOnly && (
+              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Hành động
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -132,23 +135,29 @@ const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products,
 
                 {/* Flash Price */}
                 <td className="px-6 py-4">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={product.flash_price || ''}
-                      onChange={(e) => updateProduct(index, 'flash_price', Number(e.target.value))}
-                      className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right ${
-                        priceError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      min="0"
-                      step="1000"
-                    />
-                    {priceError && (
-                      <div className="absolute left-0 top-full mt-1 text-xs text-red-600 whitespace-nowrap">
-                        {getErrorMessage(product, 'price')}
-                      </div>
-                    )}
-                  </div>
+                  {readOnly ? (
+                    <div className="text-sm font-medium text-red-600 text-right">
+                      {formatCurrency(product.flash_price || 0)}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={product.flash_price || ''}
+                        onChange={(e) => updateProduct(index, 'flash_price', Number(e.target.value))}
+                        className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-right ${
+                          priceError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        min="0"
+                        step="1000"
+                      />
+                      {priceError && (
+                        <div className="absolute left-0 top-full mt-1 text-xs text-red-600 whitespace-nowrap">
+                          {getErrorMessage(product, 'price')}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </td>
 
                 {/* Discount */}
@@ -162,48 +171,62 @@ const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products,
 
                 {/* Stock Limit */}
                 <td className="px-6 py-4">
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={product.stock_limit || ''}
-                      onChange={(e) => updateProduct(index, 'stock_limit', Number(e.target.value))}
-                      className={`w-24 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center ${
-                        stockError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
-                      min="0"
-                    />
-                    {stockError && (
-                      <div className="absolute left-0 top-full mt-1 text-xs text-red-600 whitespace-nowrap">
-                        {getErrorMessage(product, 'stock')}
-                      </div>
-                    )}
-                  </div>
+                  {readOnly ? (
+                    <div className="text-sm text-gray-900 text-center">
+                      {product.stock_limit || 0}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={product.stock_limit || ''}
+                        onChange={(e) => updateProduct(index, 'stock_limit', Number(e.target.value))}
+                        className={`w-24 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center ${
+                          stockError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                        min="0"
+                      />
+                      {stockError && (
+                        <div className="absolute left-0 top-full mt-1 text-xs text-red-600 whitespace-nowrap">
+                          {getErrorMessage(product, 'stock')}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </td>
 
                 {/* Purchase Limit */}
                 <td className="px-6 py-4">
-                  <input
-                    type="number"
-                    value={product.purchase_limit || ''}
-                    onChange={(e) => updateProduct(index, 'purchase_limit', Number(e.target.value) || undefined)}
-                    placeholder="Không giới hạn"
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
-                    min="0"
-                  />
+                  {readOnly ? (
+                    <div className="text-sm text-gray-900 text-center">
+                      {product.purchase_limit || 'Không giới hạn'}
+                    </div>
+                  ) : (
+                    <input
+                      type="number"
+                      value={product.purchase_limit || ''}
+                      onChange={(e) => updateProduct(index, 'purchase_limit', Number(e.target.value) || undefined)}
+                      placeholder="Không giới hạn"
+                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center"
+                      min="0"
+                    />
+                  )}
                 </td>
 
                 {/* Actions */}
-                <td className="px-6 py-4 text-center">
-                  <button
-                    onClick={() => removeProduct(index)}
-                    className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
-                    title="Xóa sản phẩm"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </td>
+                {!readOnly && (
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => removeProduct(index)}
+                      className="text-red-600 hover:text-red-800 p-2 rounded hover:bg-red-50"
+                      title="Xóa sản phẩm"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                )}
               </tr>
             );
           })}

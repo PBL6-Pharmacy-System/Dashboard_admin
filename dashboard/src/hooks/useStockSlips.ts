@@ -66,7 +66,7 @@ export const useStockSlips = () => {
                     order.status === 'cancelled' ? 'Cancelled' : 'Pending',
             totalAmount: order.final_amount || order.total_amount || 0,
             items: orderItems.map((item: any) => ({
-              productId: item.product_id.toString(),
+              productId: item.product_id,
               productName: item.products?.name || item.product?.name || `Sản phẩm ${item.product_id}`,
               unitPrice: item.unit_cost || 0,
               currentStock: 0,
