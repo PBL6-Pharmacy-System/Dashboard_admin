@@ -98,7 +98,7 @@ const BranchDetail = () => {
     sample: inventoryData[0]
   });
   
-  const totalInventoryValue = inventoryData.reduce((sum, item) => {
+  const totalInventoryValue = inventoryData.reduce((sum: number, item: any) => {
     const quantity = item.quantity || item.stock || 0;
     const product = item.products || item.product;
     // Try multiple price fields
@@ -118,7 +118,7 @@ const BranchDetail = () => {
 
   console.log('💵 Total inventory value:', totalInventoryValue);
 
-  const lowStockItems = inventoryData.filter(item => 
+  const lowStockItems = inventoryData.filter((item: any) => 
     (item.quantity || item.stock || 0) < (item.min_stock || 50)
   );
 
@@ -312,7 +312,7 @@ const BranchDetail = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  {lowStockItems.slice(0, 5).map((item, index) => (
+                  {lowStockItems.slice(0, 5).map((item: any, index: number) => (
                     <div key={index} className="p-3 bg-red-50 rounded-lg">
                       <p className="font-semibold text-gray-900 text-sm">
                         {item.product?.name || `Product #${item.product_id}`}

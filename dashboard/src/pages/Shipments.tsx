@@ -277,8 +277,8 @@ const Shipments: React.FC = () => {
                       <div className="text-sm text-gray-900">#{shipment.order_id}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">{shipment.orders?.customers?.users?.full_name || '-'}</div>
-                      <div className="text-sm text-gray-500">{shipment.orders?.customers?.users?.phone || '-'}</div>
+                      <div className="text-sm text-gray-900">{shipment.orders?.customers?.full_name || '-'}</div>
+                      <div className="text-sm text-gray-500">{shipment.orders?.customers?.phone || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{shipment.carrier}</div>
@@ -418,15 +418,15 @@ const Shipments: React.FC = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Họ tên:</span>
-                  <span className="font-medium">{selectedShipment.orders?.customers?.users?.full_name || '-'}</span>
+                  <span className="font-medium">{selectedShipment.orders?.customers?.full_name || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Số điện thoại:</span>
-                  <span className="font-medium">{selectedShipment.orders?.customers?.users?.phone || '-'}</span>
+                  <span className="font-medium">{selectedShipment.orders?.customers?.phone || '-'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Email:</span>
-                  <span className="font-medium">{selectedShipment.orders?.customers?.users?.email || '-'}</span>
+                  <span className="font-medium">{selectedShipment.orders?.customers?.email || '-'}</span>
                 </div>
               </div>
             </div>

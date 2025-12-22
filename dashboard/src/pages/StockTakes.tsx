@@ -236,11 +236,11 @@ const StockTakes = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(stockTake.created_at || stockTake.start_date).toLocaleDateString('vi-VN')}
+                      {new Date(stockTake.created_at || stockTake.start_date || new Date()).toLocaleDateString('vi-VN')}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date)
-                        ? new Date(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date).toLocaleDateString('vi-VN')
+                      {stockTake.completed_at
+                        ? new Date(stockTake.completed_at).toLocaleDateString('vi-VN')
                         : '-'
                       }
                     </td>

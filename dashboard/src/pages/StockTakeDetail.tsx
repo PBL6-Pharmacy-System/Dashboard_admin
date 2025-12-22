@@ -295,7 +295,7 @@ const StockTakeDetail = () => {
                 />
                 <InfoItem 
                   label="Ngày tạo"
-                  value={new Date(stockTake.created_at || stockTake.start_date).toLocaleString('vi-VN')}
+                  value={new Date(stockTake.created_at || stockTake.start_date || new Date()).toLocaleString('vi-VN')}
                 />
                 <InfoItem 
                   label="Người tạo"
@@ -477,7 +477,7 @@ const StockTakeDetail = () => {
               <div className="space-y-3">
                 <TimelineItem 
                   label="Tạo phiếu"
-                  date={stockTake.created_at || stockTake.start_date}
+                  date={stockTake.created_at || stockTake.start_date || new Date().toISOString()}
                 />
                 {stockTake.status !== 'pending' && (
                   <TimelineItem 
@@ -485,10 +485,10 @@ const StockTakeDetail = () => {
                     date={stockTake.updated_at}
                   />
                 )}
-                {(stockTake.completed_at || stockTake.complete_date || stockTake.completion_date) && (
+                {(stockTake.completed_at) && (
                   <TimelineItem 
                     label="Hoàn thành"
-                    date={stockTake.completed_at || stockTake.complete_date || stockTake.completion_date}
+                    date={stockTake.completed_at || new Date().toISOString()}
                   />
                 )}
               </div>
@@ -528,7 +528,7 @@ const ItemRow = ({
   const expectedQty = item.system_qty ?? item.expected_quantity ?? 0;
   const [inputValue, setInputValue] = useState(actualQty?.toString() || '');
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-save with debounce khi user nhập xong
   useEffect(() => {
