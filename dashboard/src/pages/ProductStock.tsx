@@ -43,6 +43,7 @@ const ProductStock = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [initialLoad, setInitialLoad] = useState(true);
   
   // 2. State quản lý thẻ đang được chọn (Mặc định là ALL)
   const [activeFilter, setActiveFilter] = useState<FilterType>('ALL');
@@ -76,6 +77,12 @@ const ProductStock = () => {
       
       console.log('Normalized branches:', normalizedBranches);
       setBranches(normalizedBranches);
+      
+      // Auto-select first branch on initial load
+      if (initialLoad && normalizedBranches.length > 0) {
+        setSelectedBranch(normalizedBranches[0].id);
+        setInitialLoad(false);
+      }
     } catch (error) {
       console.error('Error loading branches:', error);
     }

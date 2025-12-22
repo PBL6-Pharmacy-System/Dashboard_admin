@@ -5,6 +5,7 @@ import type {
 } from '../types/flashsale.types';
 import { api } from './api';
 
+
 const FLASHSALE_ENDPOINTS = {
   LIST: '/flashsales',
   CREATE: '/flashsales',
@@ -18,13 +19,18 @@ const FLASHSALE_ENDPOINTS = {
  */
 export const getAllFlashSales = async (filters?: FlashSaleFilter): Promise<FlashSale[]> => {
   try {
+    // Admin: dùng /flashsales (full access)
+    // Customer/Staff: dùng /flashsales/active (chỉ xem active)
+    
     const params = new URLSearchParams();
     if (filters?.search) params.append('search', filters.search);
     if (filters?.status && filters.status !== 'all') params.append('status', filters.status);
     if (filters?.start_date) params.append('start_date', filters.start_date);
     if (filters?.end_date) params.append('end_date', filters.end_date);
     const queryString = params.toString();
-    const endpoint = queryString ? `${FLASHSALE_ENDPOINTS.LIST}?${queryString}` : FLASHSALE_ENDPOINTS.LIST;
+    
+    const baseEndpoint = FLASHSALE_ENDPOINTS.LIST;
+    const endpoint = queryString ? `${baseEndpoint}?${queryString}` : baseEndpoint;
     const response = await api.get(endpoint);
 
     type RawProduct = {

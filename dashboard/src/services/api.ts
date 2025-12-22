@@ -53,19 +53,29 @@ const handleUnauthorized = () => {
 };
 
 const handleResponse = async (response: Response, endpoint: string) => {
-  // Handle 401 Unauthorized or 403 Forbidden
-  // BUT skip for login/register endpoints (they return 401 for wrong credentials)
-  if ((response.status === 401 || response.status === 403) && 
+  // Handle 401 Unauthorized - Token expired or invalid
+  if (response.status === 401 && 
       !endpoint.includes('/auth/login') && 
       !endpoint.includes('/auth/register') &&
       !endpoint.includes('/auth/logout')) {
     
     // Only trigger redirect once, even if multiple API calls fail
     if (!isRedirecting) {
-      console.warn('⚠️ Authentication failed on endpoint:', endpoint);
+      console.warn('⚠️ Authentication failed (401) on endpoint:', endpoint);
       handleUnauthorized();
     }
     throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+  }
+  
+  // Handle 403 Forbidden - User doesn't have permission (but is authenticated)
+  // Don't logout, just throw error for the component to handle
+  if (response.status === 403 && 
+      !endpoint.includes('/auth/login') && 
+      !endpoint.includes('/auth/register') &&
+      !endpoint.includes('/auth/logout')) {
+    console.warn('⚠️ Permission denied (403) on endpoint:', endpoint);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || errorData.message || 'Bạn không có quyền truy cập tài nguyên này.');
   }
   
   // Handle 404 - Route not found

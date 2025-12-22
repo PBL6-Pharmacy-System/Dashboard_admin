@@ -131,8 +131,8 @@ function App() {
           <Route path="customers" element={<AdminOnlyRoute><ErrorBoundary><Customers /></ErrorBoundary></AdminOnlyRoute>} />
           <Route path="stock-transfer" element={<ErrorBoundary><StockTransfer /></ErrorBoundary>} />
           <Route path="stock-transfer/create" element={<ErrorBoundary><CreateStockTransfer /></ErrorBoundary>} />
-          <Route path="branches" element={<ErrorBoundary><Branches /></ErrorBoundary>} />
-          <Route path="branches/:id" element={<ErrorBoundary><BranchDetail /></ErrorBoundary>} />
+          <Route path="branches" element={<AdminOnlyRoute><ErrorBoundary><Branches /></ErrorBoundary></AdminOnlyRoute>} />
+          <Route path="branches/:id" element={<AdminOnlyRoute><ErrorBoundary><BranchDetail /></ErrorBoundary></AdminOnlyRoute>} />
           <Route path="batches" element={<ErrorBoundary><Batches /></ErrorBoundary>} />
           <Route path="batches/:id" element={<ErrorBoundary><BatchDetail /></ErrorBoundary>} />
           <Route path="supplier-orders" element={<ErrorBoundary><SupplierOrders /></ErrorBoundary>} />
