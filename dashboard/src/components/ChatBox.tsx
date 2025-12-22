@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Minimize2, User, Bot, Loader2 } from 'lucide-react';
-import { dashboardService } from '../services/dashboardService';
-import { productService } from '../services/productService';
-import { orderService } from '../services/orderService';
-import { branchService } from '../services/branchService';
+import { authService } from '../services/authService';
+
+const AI_BASE_URL = import.meta.env.VITE_AI_BASE_URL || 'https://unendowed-placably-aviana.ngrok-free.dev';
 
 interface Message {
   id: string;
@@ -11,7 +10,8 @@ interface Message {
   text: string;
   timestamp: Date;
   senderName?: string;
-  data?: any;
+  data?: unknown;
+  isStreaming?: boolean;
 }
 
 interface ChatBoxProps {
@@ -22,16 +22,10 @@ interface ChatBoxProps {
 const ChatBox = ({ userRole = 'admin', userName = 'Admin' }: ChatBoxProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'bot',
-      text: 'Xin chào! Tôi là trợ lý ảo của hệ thống. Bạn có thể hỏi tôi về:\n\n- Tổng quan hệ thống (overview, thống kê)\n- Sản phẩm (products, inventory)\nĐơn hàng (orders, sales)\nChi nhánh (branches)\nDoanh thu (revenue)\n\nVí dụ: "Cho tôi xem tổng quan hệ thống", "Có bao nhiêu sản phẩm?", "Danh sách đơn hàng"',
-      timestamp: new Date(),
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -42,109 +36,107 @@ const ChatBox = ({ userRole = 'admin', userName = 'Admin' }: ChatBoxProps) => {
     scrollToBottom();
   }, [messages]);
 
-  // AI Response Handler
-  const processUserMessage = async (userMessage: string): Promise<string> => {
-    const lowerMessage = userMessage.toLowerCase();
-    
+  // Stream chat with AI using /api/auth-chat/stream endpoint
+  const streamChatWithAI = async (userMessage: string) => {
     try {
-      // Overview / Tổng quan
-      if (lowerMessage.includes('tổng quan') || lowerMessage.includes('overview') || 
-          lowerMessage.includes('thống kê') || lowerMessage.includes('dashboard')) {
-        const data = await dashboardService.getOverview();
-        if (data.success && data.data) {
-          const stats = data.data;
-          return `**Tổng quan hệ thống:**\n\n` +
-                 `Doanh thu hôm nay: ${stats.revenue.today?.toLocaleString('vi-VN')}₫\n` +
-                 `Doanh thu tháng này: ${stats.revenue.thisMonth?.toLocaleString('vi-VN')}₫\n` +
-                 `Sản phẩm: ${stats.products.total} sản phẩm\n` +
-                 `Đơn hàng: ${stats.orders.total} đơn\n` +
-                 `Khách hàng: ${stats.customers.total} khách\n` +
-                 `Sản phẩm sắp hết hạn: ${stats.products.expiringNext30} sản phẩm`;
-        }
+      const accessToken = authService.getAccessToken();
+      const requestBody: { message: string; session_id?: string } = { message: userMessage };
+      
+      if (sessionId) {
+        requestBody.session_id = sessionId;
       }
 
-      // Products / Sản phẩm
-      if (lowerMessage.includes('sản phẩm') || lowerMessage.includes('product') || 
-          lowerMessage.includes('hàng hóa')) {
-        const data = await productService.getAllProducts(1, 5);
-        if (data.products && data.products.length > 0) {
-          let response = `📦 **Danh sách sản phẩm (${data.pagination?.total || data.products.length} sản phẩm):**\n\n`;
-          data.products.slice(0, 5).forEach((p: any, i: number) => {
-            response += `${i + 1}. ${p.name}\n   Giá: ${Number(p.price || 0).toLocaleString('vi-VN')}₫\n`;
-          });
-          if (data.products.length > 5) {
-            response += `\n... và ${data.products.length - 5} sản phẩm khác`;
+      const response = await fetch(`${AI_BASE_URL}/api/auth-chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
+      
+      const decoder = new TextDecoder();
+      let buffer = '';
+      const textChunks: string[] = [];
+      let newSessionId = sessionId;
+      
+      const botMessageId = (Date.now() + 1).toString();
+      
+      // Add initial streaming message
+      const initialBotMessage: Message = {
+        id: botMessageId,
+        sender: 'bot',
+        text: '',
+        timestamp: new Date(),
+        isStreaming: true
+      };
+      setMessages(prev => [...prev, initialBotMessage]);
+
+      const processLine = (line: string) => {
+        if (!line || !line.startsWith('data: ')) return;
+        
+        try {
+          const data = JSON.parse(line.slice(6));
+          
+          if (data.type === 'metadata') {
+            if (data.session_id) {
+              newSessionId = data.session_id;
+              setSessionId(newSessionId);
+            }
+          } else if (data.type === 'text') {
+            if (data.chunk) {
+              textChunks.push(data.chunk);
+              setMessages(prev => prev.map(msg => 
+                msg.id === botMessageId 
+                  ? { ...msg, text: textChunks.join('') }
+                  : msg
+              ));
+            }
           }
-          return response;
+        } catch {
+          // Silent fail for invalid JSON
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          if (buffer) {
+            buffer.split('\n').forEach(processLine);
+          }
+          
+          setMessages(prev => prev.map(msg => 
+            msg.id === botMessageId 
+              ? { ...msg, text: textChunks.join(''), isStreaming: false }
+              : msg
+          ));
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        const lastNewline = buffer.lastIndexOf('\n');
+        if (lastNewline === -1) continue;
+        
+        const complete = buffer.slice(0, lastNewline);
+        buffer = buffer.slice(lastNewline + 1);
+        
+        complete.split('\n').forEach(processLine);
       }
 
-      // Orders / Đơn hàng
-      if (lowerMessage.includes('đơn hàng') || lowerMessage.includes('order') || 
-          lowerMessage.includes('đơn đặt')) {
-        const data = await orderService.getAllOrders(1, 5);
-        const orders = (data as any).orders || [];
-        if (orders && orders.length > 0) {
-          let response = `🛒 **Đơn hàng gần đây (${(data as any).pagination?.total || orders.length} đơn):**\n\n`;
-          orders.slice(0, 5).forEach((o: any, i: number) => {
-            response += `${i + 1}. Đơn #${o.id} - ${o.status}\n   Tổng: ${Number(o.total_amount || 0).toLocaleString('vi-VN')}₫\n`;
-          });
-          return response;
-        }
-      }
-
-      // Branches / Chi nhánh
-      if (lowerMessage.includes('chi nhánh') || lowerMessage.includes('branch') || 
-          lowerMessage.includes('cửa hàng')) {
-        const data = await branchService.getAllBranches({});
-        const branches = Array.isArray(data.data) ? data.data : (data.data?.branches || []);
-        if (branches.length > 0) {
-          let response = `🏢 **Danh sách chi nhánh (${branches.length} chi nhánh):**\n\n`;
-          branches.forEach((b: any, i: number) => {
-            response += `${i + 1}. ${b.branch_name || b.name || `Chi nhánh ${b.id}`}\n`;
-            if (b.address) response += `   📍 ${b.address}\n`;
-          });
-          return response;
-        }
-      }
-
-      // Revenue / Doanh thu
-      if (lowerMessage.includes('doanh thu') || lowerMessage.includes('revenue') || 
-          lowerMessage.includes('sales')) {
-        const data = await dashboardService.getRevenue();
-        if (data.success && data.data) {
-          return `**Thông tin doanh thu:**\n\n` +
-                 `Tổng doanh thu: ${data.data.current.totalRevenue?.toLocaleString('vi-VN')}₫\n` +
-                 `Tổng đơn hàng: ${data.data.current.totalOrders}\n` +
-                 `Giá trị TB/đơn: ${data.data.current.averageOrderValue?.toLocaleString('vi-VN')}₫\n` +
-                 `(Dữ liệu được cập nhật theo thời gian thực)`;
-        }
-      }
-
-      // Inventory / Kho hàng
-      if (lowerMessage.includes('kho') || lowerMessage.includes('inventory') || 
-          lowerMessage.includes('tồn kho')) {
-        const data = await dashboardService.getInventoryStats();
-        if (data.success && data.data) {
-          return `**Thống kê kho hàng:**\n\n` +
-                 `Tổng sản phẩm: ${data.data.totalProducts || 'N/A'}\n` +
-                 `Sản phẩm sắp hết: ${data.data.lowStockProducts || 0}\n` +
-                 `Hết hàng: ${data.data.outOfStockProducts || 0}\n` +
-                 `Sắp hết hạn: ${data.data.expiringProducts || 0}`;
-        }
-      }
-
-      // Default response
-      return 'Xin lỗi, tôi chưa hiểu câu hỏi của bạn. Bạn có thể hỏi về:\n\n' +
-             '• Tổng quan hệ thống\n' +
-             '• Sản phẩm\n' +
-             '• Đơn hàng\n' +
-             '• Chi nhánh\n' +
-             '• Doanh thu\n' +
-             '• Kho hàng';
+      return textChunks.join('');
     } catch (error) {
-      console.error('Error processing message:', error);
-      return '❌ Xin lỗi, đã có lỗi xảy ra khi xử lý yêu cầu. Vui lòng thử lại sau.';
+      console.error('Error streaming chat:', error);
+      throw error;
     }
   };
 
@@ -160,25 +152,17 @@ const ChatBox = ({ userRole = 'admin', userName = 'Admin' }: ChatBoxProps) => {
     };
 
     setMessages((prev) => [...prev, newMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsLoading(true);
 
-    // Process message and get AI response
     try {
-      const responseText = await processUserMessage(inputMessage);
-      
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'bot',
-        text: responseText,
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botResponse]);
-    } catch (error) {
+      await streamChatWithAI(currentInput);
+    } catch {
       const errorResponse: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        text: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.',
+        text: 'Xin lỗi, đã có lỗi xảy ra khi kết nối đến AI. Vui lòng thử lại.',
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorResponse]);

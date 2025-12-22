@@ -4,8 +4,11 @@ import { Trophy, TrendingDown } from 'lucide-react';
 import type { ProductData } from '../../types/dashboard.types';
 import { useDashboard } from '../../hooks/useDashboard';
 
-const COLORS = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899'];
-const LOW_COLORS = ['#EF4444', '#DC2626', '#B91C1C', '#991B1B', '#7F1D1D'];
+// Màu xanh dương cho tab "Bán chạy"
+const TOP_COLORS = ['#1E40AF', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD'];
+
+// Màu đỏ cho tab "Bán tệ"
+const LOW_COLORS = ['#991B1B', '#B91C1C', '#DC2626', '#EF4444', '#F87171'];
 
 const formatCurrency = (value: number) => 
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 }).format(value);
@@ -59,7 +62,18 @@ const TopProducts: FC = () => {
   }, [topProducts.lowSelling]);
 
   const currentData = activeTab === 'top' ? topSelling : lowSelling;
-  const currentColors = activeTab === 'top' ? COLORS : LOW_COLORS;
+  const currentColors = activeTab === 'top' ? TOP_COLORS : LOW_COLORS;
+  
+  // Tính max scale động dựa trên số sản phẩm bán nhiều nhất, làm tròn lên số chẵn
+  const maxSales = useMemo(() => {
+    if (currentData.length === 0) return 50;
+    const max = Math.max(...currentData.map(p => p.sales));
+    // Làm tròn lên bội số của 10 hoặc 5
+    if (max <= 10) return Math.ceil(max / 5) * 5;
+    if (max <= 50) return Math.ceil(max / 10) * 10;
+    if (max <= 100) return Math.ceil(max / 20) * 20;
+    return Math.ceil(max / 50) * 50;
+  }, [currentData]);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 h-full flex flex-col">
@@ -115,7 +129,7 @@ const TopProducts: FC = () => {
               layout="vertical" 
               margin={{ left: 10, right: 20, top: 10, bottom: 10 }}
             >
-              <XAxis type="number" hide />
+              <XAxis type="number" domain={[0, maxSales]} hide />
               <YAxis 
                 dataKey="name" 
                 type="category" 

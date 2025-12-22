@@ -46,8 +46,7 @@ const Products = () => {
         
         const productsData = (response?.products || []).map((product: Product) => ({
           ...product,
-          // Ensure images is always an array
-          images: Array.isArray(product.images) ? product.images : (product.image_url ? [product.image_url] : [])
+          image_url: product.image_url || '',
         }));
         setProducts(productsData);
         setTotalProducts(response?.pagination?.total || productsData.length);
@@ -74,8 +73,7 @@ const Products = () => {
           const response = await categoryService.getProductsByCategoryId(selectedSubcategory.id);
           const productsData = (response?.products || []).map((product: Product) => ({
             ...product,
-            // Ensure images is always an array
-            images: Array.isArray(product.images) ? product.images : (product.image_url ? [product.image_url] : [])
+            image_url: product.image_url || '',
           }));
           setProducts(productsData);
           setCurrentPage(1);
@@ -336,7 +334,7 @@ const Products = () => {
                 {/* Product Image */}
                 <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
                   <img
-                    src={product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/400'}
+                    src={product.image_url ? product.image_url : 'https://via.placeholder.com/400'}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
@@ -472,7 +470,7 @@ const Products = () => {
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-4">
                       <img
-                        src={product.images && product.images.length > 0 ? product.images[0] : 'https://via.placeholder.com/64'}
+                        src={product.image_url ? product.image_url : 'https://via.placeholder.com/64'}
                         alt={product.name}
                         className="w-20 h-20 rounded-xl object-cover shadow-md border-2 border-blue-200"
                       />
