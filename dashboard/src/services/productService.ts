@@ -5,6 +5,7 @@ export interface Product {
   name: string;
   description: string;
   price: string;
+  sku?: string | null; // Mã SKU sản phẩm
   stock?: number; // Deprecated - use total_stock instead
   in_stock?: boolean; // Boolean - for customer account (có hàng/hết hàng)
   total_stock?: number; // Số lượng tồn kho thực tế (cho staff/admin)

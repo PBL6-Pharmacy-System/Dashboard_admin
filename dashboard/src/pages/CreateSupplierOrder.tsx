@@ -143,7 +143,7 @@ const CreateSupplierOrder = () => {
         supplier_id: parseInt(formData.supplier_id),
         branch_id: parseInt(formData.branch_id),
         notes: formData.notes,
-        total_amount: totalAmount,
+        // total_amount: totalAmount,
         items: items.map(item => ({
           product_id: item.product_id,
           quantity: item.quantity,

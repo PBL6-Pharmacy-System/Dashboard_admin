@@ -56,15 +56,29 @@ interface SupplierOrderItem {
 const supplierOrderService = {
   async getAllOrders(params?: {
     supplierId?: number;
+    supplier_id?: number;
     branchId?: number;
+    branch_id?: number;
     status?: string;
+    start_date?: string;
+    end_date?: string;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }) {
     const query = new URLSearchParams();
-    if (params?.supplierId) query.append('supplierId', String(params.supplierId));
-    if (params?.branchId) query.append('branchId', String(params.branchId));
+    // Backend expects supplier_id and branch_id (snake_case)
+    const supplierIdValue = params?.supplier_id || params?.supplierId;
+    const branchIdValue = params?.branch_id || params?.branchId;
+    
+    if (supplierIdValue) query.append('supplier_id', String(supplierIdValue));
+    if (branchIdValue) query.append('branch_id', String(branchIdValue));
     if (params?.status) query.append('status', params.status);
+    if (params?.start_date) query.append('start_date', params.start_date);
+    if (params?.end_date) query.append('end_date', params.end_date);
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
     
@@ -78,104 +92,63 @@ const supplierOrderService = {
   async createOrder(data: {
     supplier_id: number;
     branch_id: number;
+    expected_date?: string;
     note?: string;
     notes?: string;
-    total_amount?: number;
-    tax_amount?: number;
-    discount_amount?: number;
     items: Array<{
       product_id: number;
       quantity: number;
-      unit_cost: number;
+      unit_price?: number;
+      cost_price?: number;
+      unit_cost?: number;
+      batch_number?: string;
+      manufacture_date?: string;
       manufacturing_date?: string;
       expiry_date?: string;
+      note?: string;
     }>;
   }) {
-    // Calculate totals
-    const totalAmount = data.total_amount || 0;
-    const taxAmount = data.tax_amount || 0;
-    const discountAmount = data.discount_amount || 0;
-    const finalAmount = totalAmount + taxAmount - discountAmount;
-    
-    console.log(`💰 Order Calculations:
-      - Total: ${totalAmount}
-      - Tax: ${taxAmount}
-      - Discount: ${discountAmount}
-      - Final: ${finalAmount}`);
-    
-    // Validate amounts
-    if (isNaN(totalAmount) || totalAmount <= 0) {
-      throw new Error(`Invalid total_amount: ${totalAmount}. Must be > 0 and a valid number.`);
-    }
-    if (isNaN(finalAmount) || finalAmount < 0) {
-      throw new Error(`Invalid final_amount: ${finalAmount}. Must be >= 0 and a valid number.`);
-    }
-    
-    // Build payload with required fields from schema
+    // Build payload theo API backend
     const payload: Record<string, unknown> = {
       supplier_id: data.supplier_id,
       branch_id: data.branch_id,
-      total_amount: Math.round(totalAmount * 100) / 100,
-      final_amount: Math.round(finalAmount * 100) / 100,
-      items: data.items.map(item => {
-        const itemPayload: Record<string, unknown> = {
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: Math.round(item.unit_cost * 100) / 100,
-          subtotal: Math.round(item.quantity * item.unit_cost * 100) / 100
-        };
-        // Only add optional fields if they have values
-        if (item.manufacturing_date) itemPayload.batch_number = item.manufacturing_date;
-        if (item.expiry_date) itemPayload.expiry_date = item.expiry_date;
-        return itemPayload;
-      })
+      items: data.items.map(item => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price || item.cost_price || item.unit_cost || 0,
+        batch_number: item.batch_number,
+        manufacture_date: item.manufacture_date || item.manufacturing_date,
+        expiry_date: item.expiry_date,
+        note: item.note
+      }))
     };
     
-    // Add optional amount fields if non-zero
-    if (taxAmount > 0) {
-      payload.tax_amount = Math.round(taxAmount * 100) / 100;
-    }
-    if (discountAmount > 0) {
-      payload.discount_amount = Math.round(discountAmount * 100) / 100;
+    // Add optional fields
+    if (data.expected_date) {
+      payload.expected_date = data.expected_date;
     }
     
-    // Add note if provided
     const noteValue = data.note || data.notes;
     if (noteValue && typeof noteValue === 'string' && noteValue.trim()) {
       payload.note = noteValue.trim();
     }
     
-    console.log('✅ Supplier order payload ready to send:', JSON.stringify(payload, null, 2));
-    
-    // Final validation
-    if (!payload.supplier_id || !payload.branch_id) {
-      throw new Error('Missing required fields: supplier_id or branch_id');
-    }
-    
-    if (!Array.isArray(payload.items) || payload.items.length === 0) {
-      throw new Error('Items array is required and must not be empty');
-    }
-    
-    if (!payload.total_amount || !payload.final_amount) {
-      throw new Error('total_amount and final_amount are required and must be valid numbers');
-    }
+    console.log('✅ Supplier order payload:', JSON.stringify(payload, null, 2));
     
     return api.post('/supplier-orders', payload);
   },
 
-  async updateOrderStatus(id: number, status: string, receivedItems?: Array<Record<string, unknown>>) {
-    return api.patch(`/supplier-orders/${id}/status`, { status, receivedItems });
+  async updateOrderStatus(id: number, status: string) {
+    return api.patch(`/supplier-orders/${id}/status`, { status });
   },
 
-  async receiveOrder(id: number, data: { 
-    items: Array<{
-      product_id: number;
-      received_quantity: number;
-      manufacturing_date?: string;
-      expiry_date?: string;
-    }>
-  }) {
-    return api.post(`/supplier-orders/${id}/receive`, { receivedItems: data.items });
+  // Nhận hàng từ NCC - TỰ ĐỘNG NHẬP KHO
+  // ⚠️ Tự động cập nhật branchinventory.stock và tạo productBatch
+  async receiveOrder(id: number, receivedItems?: Array<{
+    product_id: number;
+    received_qty: number;
+  }>) {
+    return api.post(`/supplier-orders/${id}/receive`, { receivedItems });
   },
 
   async cancelOrder(id: number, reason: string) {
@@ -184,15 +157,25 @@ const supplierOrderService = {
 
   async getStatistics(params?: {
     startDate?: string;
+    start_date?: string;
     endDate?: string;
+    end_date?: string;
     supplierId?: number;
+    supplier_id?: number;
     branchId?: number;
+    branch_id?: number;
   }) {
     const query = new URLSearchParams();
-    if (params?.startDate) query.append('startDate', params.startDate);
-    if (params?.endDate) query.append('endDate', params.endDate);
-    if (params?.supplierId) query.append('supplierId', String(params.supplierId));
-    if (params?.branchId) query.append('branchId', String(params.branchId));
+    // Backend expects snake_case parameters
+    const startDateValue = params?.start_date || params?.startDate;
+    const endDateValue = params?.end_date || params?.endDate;
+    const supplierIdValue = params?.supplier_id || params?.supplierId;
+    const branchIdValue = params?.branch_id || params?.branchId;
+    
+    if (startDateValue) query.append('start_date', startDateValue);
+    if (endDateValue) query.append('end_date', endDateValue);
+    if (supplierIdValue) query.append('supplier_id', String(supplierIdValue));
+    if (branchIdValue) query.append('branch_id', String(branchIdValue));
     
     return api.get(`/supplier-orders/statistics${query.toString() ? '?' + query.toString() : ''}`);
   }

@@ -97,18 +97,23 @@ const SupplierOrders = () => {
           });
           loadOrders();
         } else {
+          // Hiển thị lỗi từ backend
           setToast({
             type: 'error',
             message: 'Cập nhật thất bại',
             description: response.error || 'Không thể cập nhật trạng thái'
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error updating order status:', error);
+        // Extract error message from response
+        const errorMessage = error?.response?.data?.error 
+          || error?.message 
+          || 'Không thể cập nhật trạng thái đơn hàng';
         setToast({
           type: 'error',
           message: 'Lỗi hệ thống',
-          description: error instanceof Error ? error.message : 'Không thể cập nhật trạng thái đơn hàng'
+          description: errorMessage
         });
       }
     }

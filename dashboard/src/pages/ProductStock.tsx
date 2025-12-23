@@ -95,7 +95,7 @@ const ProductStock = () => {
 
       if (selectedBranch === 'All') {
         // Load tất cả chi nhánh
-        const allBatches = await productBatchService.getAllBatches({ status: 'available' });
+        const allBatches = await productBatchService.getAllBatches({ status: 'active' as any });
         console.log('All batches response:', allBatches);
         
         if (allBatches.success) {

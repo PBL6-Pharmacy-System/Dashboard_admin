@@ -3,6 +3,7 @@ import { ArrowLeft, Plus, Trash2, Search, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { branchService } from '../services/branchService';
 import { productService } from '../services/productService';
+import { branchInventoryService } from '../services/branchInventoryService';
 import { inventoryTransferService } from '../services/inventoryTransferService';
 import { useToast } from '../hooks/useToast';
 
@@ -12,11 +13,10 @@ type Branch = {
   name?: string;
 };
 
-type Product = {
-  id: number;
-  name?: string | null;
-  price?: number | string | null;
-  image_url?: string | null;
+import type { Product as ProductType } from '../services/productService';
+type Product = ProductType & {
+  min_stock?: number;
+  current_stock?: number;
 };
 
 interface TransferItem {
@@ -31,6 +31,7 @@ const CreateStockTransfer = () => {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [formData, setFormData] = useState({
@@ -41,10 +42,13 @@ const CreateStockTransfer = () => {
   
   const [items, setItems] = useState<TransferItem[]>([]);
   const [showProductModal, setShowProductModal] = useState(false);
+  
+  // Cache inventory data để tránh load lại nhiều lần
+  const [inventoryCache, setInventoryCache] = useState<Map<number, any>>(new Map());
 
+  // Chỉ load branches khi mount, products sẽ load khi mở modal
   useEffect(() => {
     loadBranches();
-    loadProducts();
   }, []);
 
   const loadBranches = async () => {
@@ -59,12 +63,63 @@ const CreateStockTransfer = () => {
     }
   };
 
-  const loadProducts = async () => {
+  const loadProducts = async (forceReload = false) => {
+    // Kiểm tra phải chọn chi nhánh trước
+    if (!formData.from_branch_id) {
+      warning('Vui lòng chọn chi nhánh nguồn trước');
+      return;
+    }
+    
+    const branchId = parseInt(formData.from_branch_id);
+    
+    // Sử dụng cache nếu đã load trước đó
+    if (!forceReload && inventoryCache.has(branchId)) {
+      console.log('✅ Using cached inventory for branch', branchId);
+      const cachedData = inventoryCache.get(branchId);
+      setProducts(cachedData);
+      return;
+    }
+    
     try {
-      const response = await productService.getAllProducts(1, 100);
-      setProducts(response.products || []);
+      setLoadingProducts(true);
+      
+      // Load song song products và inventory để nhanh hơn
+      const [productsResponse, inventoryItems] = await Promise.all([
+        productService.getAllProducts(1, 1000),
+        branchInventoryService.getAllProductsAtBranch(branchId)
+      ]);
+      
+      const productsData = productsResponse.products || [];
+      
+      // Tạo map để lookup nhanh
+      const stockMap = new Map(
+        inventoryItems.map(item => [item.product_id, item])
+      );
+      
+      // Gán stock vào products
+      const productsWithStock = productsData
+        .map((product: Product) => {
+          const inventory = stockMap.get(product.id);
+          return {
+            ...product,
+            current_stock: inventory?.stock || 0,
+            min_stock: inventory?.min_stock || 0
+          };
+        })
+        // Chỉ hiển thị sản phẩm có stock > min_stock
+        .filter((p: Product) => (p.current_stock || 0) > (p.min_stock || 0));
+      
+      // Lưu vào cache
+      setInventoryCache(new Map(inventoryCache.set(branchId, productsWithStock)));
+      setProducts(productsWithStock);
+      
+      console.log(`✅ Loaded ${productsWithStock.length} products with stock for branch ${branchId}`);
     } catch (error) {
       console.error('Error loading products:', error);
+      showError('Không thể tải danh sách sản phẩm');
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -113,17 +168,27 @@ const CreateStockTransfer = () => {
 
     try {
       setLoading(true);
-      await inventoryTransferService.createTransfer({
-        from_branch_id: parseInt(formData.from_branch_id),
-        to_branch_id: parseInt(formData.to_branch_id),
-        notes: formData.notes,
-        items: items.map(item => ({
-          product_id: item.product_id,
-          quantity: item.quantity
-        }))
-      });
       
-      success('Tạo phiếu chuyển kho thành công!');
+      // Backend API chỉ nhận 1 sản phẩm/phiếu
+      // Tạo nhiều phiếu nếu có nhiều sản phẩm
+      const promises = items.map(item => 
+        inventoryTransferService.createTransfer({
+          from_branch_id: parseInt(formData.from_branch_id),
+          to_branch_id: parseInt(formData.to_branch_id),
+          product_id: item.product_id,
+          quantity: item.quantity,
+          note: formData.notes
+        })
+      );
+      
+      await Promise.all(promises);
+      
+      if (items.length === 1) {
+        success('Tạo phiếu chuyển kho thành công!');
+      } else {
+        success(`Đã tạo ${items.length} phiếu chuyển kho thành công!`);
+      }
+      
       navigate('/dashboard/stock-transfer');
     } catch (error) {
       console.error('Error creating transfer:', error);
@@ -160,11 +225,16 @@ const CreateStockTransfer = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Chi nhánh nguồn (Xuất)
+                Chi nhánh nguồn (Xuất) <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.from_branch_id}
-                onChange={(e) => setFormData({ ...formData, from_branch_id: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, from_branch_id: e.target.value });
+                  setItems([]); // Clear items khi đổi chi nhánh
+                  setProducts([]); // Clear products hiện tại
+                  // Cache sẽ được sử dụng khi mở modal lần sau
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
               >
@@ -175,6 +245,9 @@ const CreateStockTransfer = () => {
                   </option>
                 ))}
               </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Danh sách sản phẩm sẽ được lọc theo chi nhánh này
+              </p>
             </div>
             
             <div>
@@ -217,13 +290,28 @@ const CreateStockTransfer = () => {
             <h2 className="text-lg font-semibold">Danh sách sản phẩm</h2>
             <button
               type="button"
-              onClick={() => setShowProductModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+              onClick={() => {
+                if (!formData.from_branch_id) {
+                  warning('Vui lòng chọn chi nhánh nguồn trước');
+                  return;
+                }
+                setShowProductModal(true);
+                // Load products ngay khi mở modal (sử dụng cache nếu có)
+                loadProducts();
+              }}
+              disabled={!formData.from_branch_id}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Plus size={18} />
+              <Plus size={20} />
               Thêm sản phẩm
             </button>
           </div>
+
+          {!formData.from_branch_id && (
+            <p className="text-sm text-amber-600 mb-4">
+              ⚠️ Vui lòng chọn chi nhánh nguồn trước khi thêm sản phẩm
+            </p>
+          )}
 
           {items.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -313,26 +401,41 @@ const CreateStockTransfer = () => {
             </div>
             
             <div className="flex-1 overflow-auto p-4">
-              <div className="space-y-2">
-                {filteredProducts.map(product => (
-                  <div 
-                    key={product.id}
-                    onClick={() => handleAddProduct(product)}
-                    className="p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer flex items-center gap-3"
-                  >
-                    {product.image_url && (
-                      <img src={product.image_url} alt="" className="w-12 h-12 object-cover rounded" />
-                    )}
-                    <div className="flex-1">
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Intl.NumberFormat('vi-VN').format(Number(product.price) || 0)}đ
-                      </p>
+              {loadingProducts ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                  <p className="text-gray-600">Đang tải danh sách sản phẩm...</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredProducts.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      {formData.from_branch_id 
+                        ? 'Không có sản phẩm nào có tồn kho > mức tối thiểu'
+                        : 'Vui lòng chọn chi nhánh nguồn trước'}
                     </div>
-                    <Plus size={20} className="text-blue-600" />
-                  </div>
-                ))}
-              </div>
+                  ) : (
+                    filteredProducts.map(product => (
+                      <div 
+                        key={product.id}
+                        onClick={() => handleAddProduct(product)}
+                        className="p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-300 cursor-pointer flex items-center gap-3"
+                      >
+                        {product.image_url && (
+                          <img src={product.image_url} alt="" className="w-12 h-12 object-cover rounded" />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-gray-500">
+                            Tồn kho: {product.current_stock || 0} | Tối thiểu: {product.min_stock || 0}
+                          </p>
+                        </div>
+                        <Plus size={20} className="text-blue-600" />
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

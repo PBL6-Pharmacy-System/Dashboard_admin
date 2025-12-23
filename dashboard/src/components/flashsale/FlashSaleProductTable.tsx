@@ -82,10 +82,10 @@ const FlashSaleProductTable: React.FC<FlashSaleProductTableProps> = ({ products,
               Giảm giá
             </th>
             <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-              SL bán
+              Giới hạn Flash Sale
             </th>
             <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Giới hạn mua
+              Giới hạn mua/khách
             </th>
             {!readOnly && (
               <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">

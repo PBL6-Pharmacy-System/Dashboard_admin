@@ -32,15 +32,21 @@ const branchService = {
     includeInventory?: boolean;
     search?: string;
     active?: boolean;
+    hasInventory?: boolean;
     page?: number;
     limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
   }) {
     const query = new URLSearchParams();
-    if (params?.includeInventory) query.append('includeInventory', 'true');
+    if (params?.includeInventory !== undefined) query.append('includeInventory', String(params.includeInventory));
     if (params?.search) query.append('search', params.search);
     if (params?.active !== undefined) query.append('active', String(params.active));
+    if (params?.hasInventory !== undefined) query.append('hasInventory', String(params.hasInventory));
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
     
     return api.get(`/branches${query.toString() ? '?' + query.toString() : ''}`);
   },
@@ -65,7 +71,7 @@ const branchService = {
     page?: number;
     limit?: number;
     sortBy?: string;
-    sortOrder?: 'ASC' | 'DESC';
+    sortOrder?: 'asc' | 'desc';
   }) {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', String(params.page));
@@ -80,8 +86,13 @@ const branchService = {
     return api.get(`/branches/${branchId}/inventory/${productId}`);
   },
 
-  async updateBranchInventory(branchId: number, productId: number, quantity: number) {
-    return api.put(`/branches/${branchId}/inventory/${productId}`, { quantity });
+  // ⚠️ KHÔNG cho phép cập nhật stock trực tiếp - chỉ cập nhật min/max stock
+  // Stock chỉ thay đổi qua: nhập kho, xuất kho, chuyển kho, kiểm kê
+  async updateInventoryConfig(branchId: number, productId: number, data: {
+    min_stock?: number;
+    max_stock?: number;
+  }) {
+    return api.put(`/branches/${branchId}/inventory/${productId}`, data);
   },
 
   async getLowStockAlerts(branchId: number, threshold?: number) {
@@ -89,8 +100,8 @@ const branchService = {
     return api.get(`/branches/${branchId}/inventory/alerts/low-stock${query}`);
   },
 
-  async getExpiringAlerts(branchId: number) {
-    return api.get(`/branches/${branchId}/inventory/alerts/expiring-soon`);
+  async getExpiringAlerts(branchId: number, days: number = 30) {
+    return api.get(`/branches/${branchId}/inventory/alerts/expiring-soon?days=${days}`);
   }
 };
 

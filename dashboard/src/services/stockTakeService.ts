@@ -58,13 +58,20 @@ interface StockTakeItem {
 const stockTakeService = {
   async getAllStockTakes(params?: {
     branchId?: number;
+    branch_id?: number;
     status?: string;
+    start_date?: string;
+    end_date?: string;
     page?: number;
     limit?: number;
   }) {
     const query = new URLSearchParams();
-    if (params?.branchId) query.append('branchId', String(params.branchId));
+    // Support both branchId and branch_id for compatibility
+    const branchIdValue = params?.branch_id || params?.branchId;
+    if (branchIdValue) query.append('branch_id', String(branchIdValue));
     if (params?.status) query.append('status', params.status);
+    if (params?.start_date) query.append('start_date', params.start_date);
+    if (params?.end_date) query.append('end_date', params.end_date);
     if (params?.page) query.append('page', String(params.page));
     if (params?.limit) query.append('limit', String(params.limit));
     
@@ -77,9 +84,15 @@ const stockTakeService = {
 
   async createStockTake(data: {
     branch_id: number;
+    note?: string;
     notes?: string;
   }) {
-    return api.post('/stock-takes', data);
+    // Backend expects 'note', but support both for compatibility
+    const payload = {
+      branch_id: data.branch_id,
+      note: data.note || data.notes
+    };
+    return api.post('/stock-takes', payload);
   },
 
   async getStockTakeItems(id: number) {
@@ -98,6 +111,8 @@ const stockTakeService = {
     return api.put(`/stock-takes/${stockTakeId}/items/${itemId}`, payload);
   },
 
+  // Hoàn thành kiểm kê - Tự động điều chỉnh stock theo actual_qty
+  // ⚠️ Phải kiểm đếm hết tất cả sản phẩm trước khi complete
   async completeStockTake(id: number) {
     return api.post(`/stock-takes/${id}/complete`, {});
   },

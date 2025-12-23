@@ -51,7 +51,7 @@ const StockTakes = () => {
     try {
       setLoading(true);
       const params: any = {};
-      if (selectedBranch) params.branchId = selectedBranch;
+      if (selectedBranch) params.branch_id = selectedBranch;
       if (selectedStatus) params.status = selectedStatus;
       
       console.log('🔄 Fetching stock takes with params:', params);

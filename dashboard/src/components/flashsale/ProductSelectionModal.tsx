@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Product } from '../../services/productService';
-import { api } from '../../services/api';
+import { branchInventoryService } from '../../services/branchInventoryService';
 
 interface ProductSelectionModalProps {
   isOpen: boolean;
@@ -36,7 +36,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
       setFilteredProducts(
         products.filter(p =>
           p.name.toLowerCase().includes(searchLower) ||
-          p.id.toString().includes(searchLower)
+          p.id.toString().includes(searchLower) ||
+          (p.sku && p.sku.toLowerCase().includes(searchLower))
         )
       );
     }
@@ -45,16 +46,72 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/products');
-      // Handle different response structures
-      const productsData = Array.isArray(response.data) 
-        ? response.data 
-        : (response.data?.data || response.data?.products || []);
       
-      setProducts(productsData);
-      setFilteredProducts(productsData);
+      // ✅ Sử dụng service mới để lấy tất cả inventory
+      const inventoryResponse = await branchInventoryService.getBranchInventory({ limit: 10000 });
+      const inventoryData = inventoryResponse.data?.inventory || [];
+      
+      console.log('📦 Loaded inventory records:', inventoryData.length);
+      
+      // Group by product_id và tính tổng stock từ tất cả chi nhánh
+      const productStockMap = new Map<number, { product: any, totalStock: number, branches: any[] }>();
+      
+      inventoryData.forEach((inv: any) => {
+        const productId = inv.product_id;
+        const stock = inv.stock ?? 0;
+        
+        if (productStockMap.has(productId)) {
+          const existing = productStockMap.get(productId)!;
+          existing.totalStock += stock;
+          existing.branches.push({
+            branch_id: inv.branch_id,
+            branch_name: inv.branches?.name,
+            stock: stock
+          });
+        } else {
+          productStockMap.set(productId, {
+            product: inv.products,
+            totalStock: stock,
+            branches: [{
+              branch_id: inv.branch_id,
+              branch_name: inv.branches?.name,
+              stock: stock
+            }]
+          });
+        }
+      });
+      
+      // Chuyển đổi sang array và thêm totalStock vào product
+      const productsWithStock = Array.from(productStockMap.values())
+        .map(item => ({
+          ...item.product,
+          stock: item.totalStock, // Tổng tồn kho từ tất cả chi nhánh
+          branchinventory: item.branches
+        }))
+        .filter(p => p.id); // Lọc bỏ records không có product
+      
+      // Lọc chỉ sản phẩm có tồn kho > 0
+      const filteredByStock = productsWithStock.filter((p: Product) => {
+        const stock = p.stock ?? 0;
+        return stock > 0;
+      });
+      
+      console.log('✅ Total unique products:', productsWithStock.length);
+      console.log('✅ Products with stock > 0:', filteredByStock.length);
+      console.log('📊 Sample products:', filteredByStock.slice(0, 3).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        total_stock: p.stock,
+        branches: p.branchinventory?.map((bi: any) => ({
+          branch: bi.branch_name,
+          stock: bi.stock
+        }))
+      })));
+      
+      setProducts(filteredByStock);
+      setFilteredProducts(filteredByStock);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('❌ Error loading products:', error);
       setProducts([]);
       setFilteredProducts([]);
     } finally {
@@ -72,13 +129,13 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
     setSelectedIds(newSelected);
   };
 
-  const toggleAll = () => {
-    if (selectedIds.size === filteredProducts.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredProducts.map(p => p.id)));
-    }
-  };
+  // const toggleAll = () => {
+  //   if (selectedIds.size === filteredProducts.length) {
+  //     setSelectedIds(new Set());
+  //   } else {
+  //     setSelectedIds(new Set(filteredProducts.map(p => p.id)));
+  //   }
+  // };
 
   const handleConfirm = () => {
     const selected = products.filter(p => selectedIds.has(p.id));
@@ -98,8 +155,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      {/* Backdrop */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity" onClick={onClose}></div>
+      {/* Backdrop - Làm mờ nền, không đổi màu */}
+      <div className="fixed inset-0 bg-black/5 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
@@ -123,24 +180,38 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
           </div>
 
           {/* Search */}
-          <div className="p-6 border-b">
+          <div className="p-6 border-b bg-gray-50">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Tìm kiếm theo tên sản phẩm hoặc ID..."
+                placeholder="Nhập để tìm kiếm sản phẩm (tên, ID, mã SKU)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                autoFocus
+                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
               />
               <svg
-                className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                className="absolute left-3 top-3.5 w-5 h-5 text-gray-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Chỉ hiển thị sản phẩm còn hàng (stock &gt; 0)
+            </p>
           </div>
 
           {/* Product List */}
@@ -160,12 +231,6 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
               <>
                 {/* Select All */}
                 <div className="flex items-center p-3 bg-gray-50 rounded-lg mb-3">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.size === filteredProducts.length && filteredProducts.length > 0}
-                    onChange={toggleAll}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
                   <label className="ml-3 text-sm font-medium text-gray-700">
                     Chọn tất cả ({filteredProducts.length} sản phẩm)
                   </label>
@@ -176,7 +241,8 @@ const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                   {filteredProducts.map((product) => {
                     const isSelected = selectedIds.has(product.id);
                     const isAlreadySelected = selectedProductIds.includes(product.id);
-                    const stock = product.stock ?? product.in_stock ?? 0;
+                    // Backend trả về 'stock' = tổng tồn từ tất cả chi nhánh
+                    const stock = product.stock ?? 0;
 
                     return (
                       <div

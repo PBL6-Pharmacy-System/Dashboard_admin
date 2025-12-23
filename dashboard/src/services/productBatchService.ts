@@ -39,7 +39,15 @@ class ProductBatchService {
   private basePath = '/product-batches';
 
   // Lấy tất cả lô hàng
-  async getAllBatches(params?: { branch_id?: number; product_id?: number; status?: string }) {
+  async getAllBatches(params?: { 
+    branch_id?: number; 
+    product_id?: number; 
+    supplier_id?: number;
+    status?: 'active' | 'expired' | 'disposed';
+    expiring_soon?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
     const queryString = params ? '?' + new URLSearchParams(
       Object.entries(params)
         .filter(([, v]) => v !== undefined)
@@ -64,28 +72,38 @@ class ProductBatchService {
     return await api.post(`${this.basePath}/fefo/allocate`, data);
   }
 
-  // Xuất kho theo FEFO
+  // Xuất kho theo FEFO - chỉ xuất 1 sản phẩm mỗi lần
   async exportFEFO(data: { 
     branch_id: number; 
     product_id: number; 
-    quantity: number; 
-    reason: string;
-    order_id?: number;
+    quantity: number;
+    reference_type: 'manual_export' | 'order_fulfillment' | 'transfer' | 'damage' | 'sample' | 'return_to_supplier';
+    reference_id?: number;
+    note?: string;
   }) {
     return await api.post(`${this.basePath}/fefo/export`, data);
   }
 
-  // Nhập hàng vào lô
+  // Nhập hàng vào lô mới - tạo batch mới
   async importBatch(data: {
     product_id: number;
     branch_id: number;
     batch_number: string;
     quantity: number;
+    manufacture_date: string;
     expiry_date: string;
     cost_price: number;
-    supplier_id?: number;
+    selling_price?: number;
+    supplier_id: number;
+    note?: string;
   }) {
-    return await api.post(`${this.basePath}/import`, data);
+    // Sử dụng POST /product-batches để tạo batch mới
+    return await api.post(`${this.basePath}`, data);
+  }
+
+  // Nhập thêm vào lô hiện có
+  async addStockToBatch(batchId: number, data: { quantity: number; note?: string }) {
+    return await api.post(`${this.basePath}/${batchId}/add-stock`, data);
   }
 
   // Xem tổng quan lô hàng của sản phẩm
@@ -103,13 +121,14 @@ class ProductBatchService {
     return await api.put(`${this.basePath}/${batchId}`, data);
   }
 
-  // Đánh dấu lô hết hạn
+  // Đánh dấu lô hết hạn - KHÔNG tự động trừ stock
   async expireBatch(batchId: number) {
     return await api.post(`${this.basePath}/${batchId}/expire`, {});
   }
 
-  // Tiêu hủy lô hàng
-  async disposeBatch(batchId: number, data: { disposed_quantity: number; reason: string }) {
+  // Tiêu hủy lô hàng hết hạn - TỰ ĐỘNG TRỪ STOCK
+  // ⚠️ Chỉ tiêu hủy được lô đã đánh dấu 'expired'
+  async disposeBatch(batchId: number, data: { note?: string }) {
     return await api.post(`${this.basePath}/${batchId}/dispose`, data);
   }
 

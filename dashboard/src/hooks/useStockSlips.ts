@@ -4,18 +4,39 @@ import { supplierOrderService } from '../services/supplierOrderService';
 import { inventoryTransferService } from '../services/inventoryTransferService';
 import { productService } from '../services/productService';
 import { branchService } from '../services/branchService';
+import { branchInventoryService } from '../services/branchInventoryService';
 
 export const useStockSlips = () => {
   // State dữ liệu
   const [slips, setSlips] = useState<StockSlip[]>([]);
   const [inventoryList, setInventoryList] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // State cho Modal Tạo Phiếu (Bước 1)
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [modalType, setModalType] = useState<'IMPORT' | 'EXPORT'>('IMPORT');
+  const [newSlipItems, setNewSlipItems] = useState<SlipItem[]>([]);
+  const [slipReason, setSlipReason] = useState('');
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [destinationBranchId, setDestinationBranchId] = useState<number | null>(null);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [filterBranchId, setFilterBranchId] = useState<number | null>(null);
+
+  // State cho Modal Nhập Thực Tế (Bước 3)
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+  const [receivingSlip, setReceivingSlip] = useState<StockSlip | null>(null);
 
   useEffect(() => {
     loadSlips();
-    loadInventory();
     loadBranches();
   }, []);
+
+  // ✅ Reload inventory khi đổi chi nhánh
+  useEffect(() => {
+    if (selectedBranchId) {
+      loadInventory();
+    }
+  }, [selectedBranchId]);
 
   const loadBranches = async () => {
     try {
@@ -124,16 +145,31 @@ export const useStockSlips = () => {
 
   const loadInventory = async () => {
     try {
-      const response = await productService.getAllProducts(1, 100);
-      const products = response.products?.map((p: any) => ({
-        id: p.id.toString(),
-        name: p.name,
-        category: p.category?.name || 'Chưa phân loại',
-        price: Number(p.price) || 0,
-        totalStock: 0, // Will be loaded from branch inventory
-        minStock: 50,
-        maxStock: 500
-      })) || [];
+      // ✅ Load cả products và inventory từ branch
+      const [productsResponse, inventoryResponse] = await Promise.all([
+        productService.getAllProducts(1, 1000),
+        selectedBranchId 
+          ? branchInventoryService.getAllProductsAtBranch(selectedBranchId)
+          : Promise.resolve([])
+      ]);
+
+      // ✅ Tạo map inventory theo product_id
+      const inventoryMap = new Map(
+        inventoryResponse.map(inv => [inv.product_id, inv])
+      );
+
+      const products = productsResponse.products?.map((p: any) => {
+        const inventory = inventoryMap.get(p.id);
+        return {
+          id: p.id.toString(),
+          name: p.name,
+          category: p.category?.name || 'Chưa phân loại',
+          price: Number(p.price) || 0,
+          totalStock: inventory?.stock || p.total_stock || 0, // ✅ Lấy stock từ branchInventory
+          minStock: inventory?.min_stock || 50,
+          maxStock: inventory?.max_stock || 500
+        };
+      }) || [];
       
       setInventoryList(products);
     } catch (error) {
@@ -141,20 +177,6 @@ export const useStockSlips = () => {
     }
   };
   
-  // State cho Modal Tạo Phiếu (Bước 1)
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [modalType, setModalType] = useState<'IMPORT' | 'EXPORT'>('IMPORT');
-  const [newSlipItems, setNewSlipItems] = useState<SlipItem[]>([]);
-  const [slipReason, setSlipReason] = useState('');
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
-  const [destinationBranchId, setDestinationBranchId] = useState<number | null>(null);
-  const [branches, setBranches] = useState<any[]>([]);
-  const [filterBranchId, setFilterBranchId] = useState<number | null>(null);
-
-  // State cho Modal Nhập Thực Tế (Bước 3)
-  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
-  const [receivingSlip, setReceivingSlip] = useState<StockSlip | null>(null);
-
   // --- LOGIC BƯỚC 1: TẠO PHIẾU DỰ KIẾN ---
 
   const openCreateModal = (type: 'IMPORT' | 'EXPORT') => {
@@ -323,15 +345,16 @@ export const useStockSlips = () => {
           throw new Error('Vui lòng thêm ít nhất 1 sản phẩm!');
         }
 
-        await inventoryTransferService.createTransfer({
-          from_branch_id: selectedBranchId,
-          to_branch_id: destinationBranchId,
-          notes: slipReason,
-          items: newSlipItems.map(item => ({
+        // Tạo phiếu chuyển kho cho từng sản phẩm (backend chỉ cho phép 1 product/lần)
+        for (const item of newSlipItems) {
+          await inventoryTransferService.createTransfer({
+            from_branch_id: selectedBranchId,
+            to_branch_id: destinationBranchId,
             product_id: Number(item.productId),
-            quantity: item.requestQuantity
-          }))
-        });
+            quantity: item.requestQuantity,
+            note: slipReason,
+          })
+        }
 
         console.log('✅ Tạo phiếu chuyển kho thành công!');
         await loadSlips();
@@ -388,12 +411,12 @@ export const useStockSlips = () => {
       
       if (type === 'SO') {
         // Supplier Order - Import
-        await supplierOrderService.receiveOrder(actualId, {
-          items: receivingSlip.items.map(item => ({
+        await supplierOrderService.receiveOrder(actualId,
+          receivingSlip.items.map(item => ({
             product_id: Number(item.productId),
-            received_quantity: item.actualQuantity
+            received_qty: item.actualQuantity
           }))
-        });
+        );
         console.log('✅ Nhận hàng thành công!');
       } else if (type === 'TR') {
         // Transfer - Export/Ship

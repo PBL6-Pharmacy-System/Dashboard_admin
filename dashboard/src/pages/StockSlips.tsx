@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   Search, X, Zap, Trash2, Check, Ban,
   ArrowDownLeft, ArrowUpRight, Calendar, User, AlertTriangle 
@@ -18,6 +19,10 @@ const StockSlips = () => {
   } = useStockSlips();
   const { confirm, confirmState, handleConfirm, handleCancel } = useConfirm();
   const { success, error } = useToast();
+
+  // ✅ State cho searchable dropdown
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // Wrapped confirmReceipt with confirm dialog
   const handleConfirmReceipt = async () => {
@@ -262,14 +267,79 @@ const StockSlips = () => {
                   </button>
                 )}
               </div>
+              {/* ✅ Searchable Dropdown */}
               <div className="relative w-full">
-                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                 <select className="w-full border border-gray-300 rounded pl-9 pr-4 py-2 text-sm focus:outline-blue-500 appearance-none bg-white"
-                   onChange={(e) => { if(e.target.value) { actions.addItemManual(e.target.value); e.target.value = ''; } }}
-                 >
-                   <option value="">-- Tìm và thêm sản phẩm thủ công --</option>
-                   {inventoryList.map(p => <option key={p.id} value={p.id}>{p.name} (Tồn: {p.totalStock})</option>)}
-                 </select>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowDropdown(true);
+                  }}
+                  onFocus={() => setShowDropdown(true)}
+                  placeholder="Tìm và thêm sản phẩm thủ công..."
+                  className="w-full border border-gray-300 rounded pl-9 pr-4 py-2 text-sm focus:outline-blue-500 focus:border-blue-500"
+                />
+                
+                {/* Dropdown menu */}
+                {showDropdown && (
+                  <>
+                    {/* Backdrop để đóng dropdown khi click ra ngoài */}
+                    <div 
+                      className="fixed inset-0 z-10" 
+                      onClick={() => {
+                        setShowDropdown(false);
+                        setSearchQuery('');
+                      }}
+                    />
+                    
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-64 overflow-auto z-20">
+                      {(() => {
+                        // ✅ Lọc sản phẩm: stock > min_stock và match search query
+                        const filteredProducts = inventoryList.filter(p => {
+                          const matchSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+                          const hasStock = p.totalStock > p.minStock; // ✅ Điều kiện: tồn > min_stock
+                          return matchSearch && hasStock;
+                        });
+
+                        if (filteredProducts.length === 0) {
+                          return (
+                            <div className="p-4 text-center text-gray-500 text-sm">
+                              {searchQuery 
+                                ? 'Không tìm thấy sản phẩm nào có tồn kho > mức tối thiểu'
+                                : 'Không có sản phẩm nào có tồn kho > mức tối thiểu'}
+                            </div>
+                          );
+                        }
+
+                        return filteredProducts.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              actions.addItemManual(p.id);
+                              setSearchQuery('');
+                              setShowDropdown(false);
+                            }}
+                            className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100 last:border-0 transition-colors"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-900">{p.name}</span>
+                              <div className="flex gap-2 text-xs">
+                                <span className="text-blue-600 font-semibold">
+                                  Tồn: {p.totalStock}
+                                </span>
+                                <span className="text-gray-500">
+                                  | Min: {p.minStock}
+                                </span>
+                              </div>
+                            </div>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

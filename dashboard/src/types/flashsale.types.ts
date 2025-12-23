@@ -28,6 +28,7 @@ export interface FlashSale {
   start_time: string;
   end_time: string;
   is_active: boolean;
+  status?: 'pending' | 'active' | 'ended'; // ✅ Status từ backend
   created_at?: string;
   updated_at?: string;
   products?: FlashSaleProduct[];
@@ -57,12 +58,12 @@ export interface FlashSaleProductInput {
 
 export interface FlashSaleFilter {
   search?: string;
-  status?: 'running' | 'upcoming' | 'ended' | 'all';
+  status?: 'active' | 'pending' | 'ended' | 'all';
   start_date?: string;
   end_date?: string;
 }
 
-export type FlashSaleStatus = 'running' | 'upcoming' | 'ended';
+export type FlashSaleStatus = 'active' | 'pending' | 'ended';
 
 export interface FlashSaleStatusInfo {
   status: FlashSaleStatus;

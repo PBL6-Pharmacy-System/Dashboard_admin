@@ -20,6 +20,18 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Test files
+test-*.html
+test-*.js
+test-*.jsx
+test-*.ts
+test-*.tsx
+test-runner.py
+
+# Documentation files (keep only essential)
+*.md
+!README.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

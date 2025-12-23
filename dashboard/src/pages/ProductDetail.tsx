@@ -43,17 +43,24 @@ const ProductDetail = () => {
       setError(null);
       const data = await productService.getProductById(parseInt(productId));
       
-      // Normalize images array if needed
-      const normalizedData: Product = {
-        ...data,
-        images: Array.isArray(data.images) ? data.images : (data.image_url ? [data.image_url] : [])
-      };
+      console.log('🔍 Product Detail Data:', data);
+      console.log('📊 Product fields:', {
+        id: data.id,
+        name: data.name,
+        category: data.categories?.name,
+        manufacturer: data.manufacturer,
+        brand: data.brand,
+        usage: data.usage,
+        dosage: data.dosage,
+        image_url: data.image_url,
+        images: data.images,
+        price: data.price,
+        stock: data.total_stock || data.stock
+      });
       
-      setProduct(normalizedData);
+      setProduct(data);
       setSelectedImage(
-        normalizedData.images && normalizedData.images.length > 0 
-          ? normalizedData.images[0] 
-          : 'https://via.placeholder.com/600'
+        data.image_url || 'https://via.placeholder.com/600'
       );
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Không thể tải thông tin sản phẩm';
@@ -169,31 +176,7 @@ const ProductDetail = () => {
                   className="w-full h-full object-contain rounded-xl"
                 />
               </div>
-              
-              {/* Thumbnail Images */}
-              {product.images && product.images.length > 1 && (
-                <div className="p-4 bg-gray-50 border-t-2 border-blue-100">
-                  <div className="grid grid-cols-4 gap-2">
-                    {product.images.map((img, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setSelectedImage(img)}
-                        className={`aspect-square rounded-lg overflow-hidden border-2 transition-all duration-300 ${
-                          selectedImage === img
-                            ? 'border-blue-500 shadow-md'
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        <img
-                          src={img}
-                          alt={`${product.name} ${index + 1}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+
             </div>
 
             {/* Quick Info Card */}

@@ -234,15 +234,16 @@ export const useStockTransfer = () => {
       // Tạo phiếu mới cho phần thiếu
       const missingItems = selectedRequest.items.filter(item => item.missingQty > 0);
       if (missingItems.length > 0) {
-        await inventoryTransferService.createTransfer({
-          from_branch_id: selectedRequest.fromBranchId!,
-          to_branch_id: selectedRequest.toBranchId!,
-          notes: `Phiếu bổ sung từ ${selectedRequest.code}`,
-          items: missingItems.map(item => ({
+        // Tạo phiếu chuyển kho cho từng sản phẩm (backend chỉ cho phép 1 product/lần)
+        for (const item of missingItems) {
+          await inventoryTransferService.createTransfer({
+            from_branch_id: selectedRequest.fromBranchId!,
+            to_branch_id: selectedRequest.toBranchId!,
             product_id: parseInt(item.id),
-            quantity: item.missingQty
-          }))
-        });
+            quantity: item.missingQty,
+            note: `Phiếu bổ sung từ ${selectedRequest.code}`,
+          });
+        }
       }
 
       await loadTransfers();

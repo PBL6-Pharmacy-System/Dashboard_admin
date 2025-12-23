@@ -14,6 +14,7 @@ import {
   validateTimeSlot
 } from '../services/flashSaleService';
 import type { Product } from '../services/productService';
+import { branchInventoryService } from '../services/branchInventoryService';
 import { useToast } from '../hooks/useToast';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import FlashSaleProductTable from '../components/flashsale/FlashSaleProductTable';
@@ -61,34 +62,32 @@ const FlashSale: React.FC = () => {
   });
 
   const getFlashSaleStatus = (flashSale: FlashSaleType) => {
-    const now = new Date();
-    const startTime = new Date(flashSale.start_time);
-    const endTime = new Date(flashSale.end_time);
-
-    if (!flashSale.is_active || now > endTime) {
-      return {
-        status: 'ended' as const,
+    // ✅ Sử dụng status từ database thay vì tính toán
+    const dbStatus = flashSale.status || 'pending';
+    
+    // Map database status to display
+    const statusMap: Record<string, { status: 'ended' | 'running' | 'upcoming', label: string, color: string, bgColor: string }> = {
+      'ended': {
+        status: 'ended',
         label: 'Đã kết thúc',
         color: 'text-red-600',
         bgColor: 'bg-red-100'
-      };
-    }
-
-    if (now >= startTime && now <= endTime) {
-      return {
-        status: 'running' as const,
+      },
+      'active': {
+        status: 'running',
         label: 'Đang diễn ra',
         color: 'text-green-600',
         bgColor: 'bg-green-100'
-      };
-    }
-
-    return {
-      status: 'upcoming' as const,
-      label: 'Sắp diễn ra',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100'
+      },
+      'pending': {
+        status: 'upcoming',
+        label: 'Sắp diễn ra',
+        color: 'text-yellow-600',
+        bgColor: 'bg-yellow-100'
+      }
     };
+
+    return statusMap[dbStatus] || statusMap['pending'];
   };
 
   const loadFlashSales = useCallback(async () => {
@@ -180,13 +179,9 @@ const FlashSale: React.FC = () => {
       setLoadingForm(true);
       const data = await getFlashSaleById(id);
       
-      setFormData({
-        name: data.name,
-        description: data.description || '',
-        start_time: new Date(data.start_time).toISOString().slice(0, 16),
-        end_time: new Date(data.end_time).toISOString().slice(0, 16),
-        is_active: data.is_active,
-        products: Array.isArray(data.products) ? data.products.map(p => {
+      // ✅ Lấy tồn kho thực tế từ branchinventory cho từng sản phẩm
+      const productsWithStock = await Promise.all(
+        (Array.isArray(data.products) ? data.products : []).map(async (p) => {
           // Parse price safely
           let price = 0;
           if (p.product?.price) {
@@ -194,18 +189,38 @@ const FlashSale: React.FC = () => {
             price = parseFloat(priceStr.replace(/[^0-9.]/g, '')) || 0;
           }
           
+          // ✅ Lấy tồn kho từ branchinventory (tổng từ tất cả chi nhánh)
+          let totalStock = 0;
+          try {
+            const inventoryResponse = await branchInventoryService.getBranchInventory({ productId: p.product_id });
+            const inventories = inventoryResponse.data?.inventory || [];
+            totalStock = inventories.reduce((sum: number, inv) => sum + (inv.stock || 0), 0);
+          } catch (error) {
+            console.error(`Failed to get stock for product ${p.product_id}:`, error);
+          }
+          
           return {
             product_id: p.product_id,
             flash_price: Number(p.flash_price) || 0,
             stock_limit: Number(p.stock_limit) || 0,
+            sold_count: Number(p.sold_count) || 0,
             purchase_limit: Number(p.purchase_limit) || 1,
             product_name: p.product?.name || 'N/A',
             product_price: price,
-            product_stock: p.product?.stock || 0,
+            product_stock: totalStock, // ✅ Tổng tồn kho từ tất cả chi nhánh
             product_image: p.product?.image,
             product_sku: p.product?.sku
           };
-        }) : []
+        })
+      );
+      
+      setFormData({
+        name: data.name,
+        description: data.description || '',
+        start_time: new Date(data.start_time).toISOString().slice(0, 16),
+        end_time: new Date(data.end_time).toISOString().slice(0, 16),
+        is_active: data.is_active,
+        products: productsWithStock
       });
       return data;
     } catch {
@@ -422,7 +437,7 @@ const FlashSale: React.FC = () => {
             </label>
             <select
               value={filters.status}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value as 'all' | 'running' | 'upcoming' | 'ended' })}
+              onChange={(e) => setFilters({ ...filters, status: e.target.value as 'all' | 'active' | 'pending' | 'ended' })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Tất cả</option>

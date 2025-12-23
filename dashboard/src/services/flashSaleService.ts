@@ -115,22 +115,35 @@ export const getAllFlashSales = async (filters?: FlashSaleFilter): Promise<Flash
         start_time: raw.start_time,
         end_time: raw.end_time,
         is_active: raw.is_active !== undefined ? raw.is_active : (raw.status === 'active'),
+        status: raw.status as 'pending' | 'active' | 'ended' | undefined, // ✅ Preserve status từ backend
         created_at: raw.created_at,
         updated_at: raw.updated_at,
         products: Array.isArray(products) ? products : []
       };
     });
 
-    // FE filter by status (running, upcoming, ended)
+    // FE filter by status - Ưu tiên dùng status từ backend
     if (filters?.status && filters.status !== 'all') {
-      const now = new Date();
       return normalized.filter(flashSale => {
+        // ✅ Nếu backend có trả status, dùng luôn
+        if (flashSale.status) {
+          if (filters.status === 'active') return flashSale.status === 'active';
+          if (filters.status === 'pending') return flashSale.status === 'pending';
+          if (filters.status === 'ended') return flashSale.status === 'ended';
+          // Nếu filter status khớp với backend status
+          if (filters.status && filters.status !== 'all') {
+            return flashSale.status === filters.status;
+          }
+        }
+        
+        // Fallback: tính theo thời gian (cho trường hợp backend không có status)
+        const now = new Date();
         const start = new Date(flashSale.start_time);
         const end = new Date(flashSale.end_time);
-        if (filters.status === 'running') {
+        if (filters.status === 'active') {
           return flashSale.is_active && now >= start && now <= end;
         }
-        if (filters.status === 'upcoming') {
+        if (filters.status === 'pending') {
           return flashSale.is_active && now < start;
         }
         if (filters.status === 'ended') {
@@ -237,6 +250,7 @@ export const getFlashSaleById = async (id: number): Promise<FlashSale> => {
       start_time: raw.start_time,
       end_time: raw.end_time,
       is_active: raw.is_active !== undefined ? raw.is_active : (raw.status === 'active'),
+      status: raw.status as 'pending' | 'active' | 'ended' | undefined, // ✅ Preserve status từ backend
       created_at: raw.created_at,
       updated_at: raw.updated_at,
       products: Array.isArray(products) ? products : []

@@ -74,26 +74,46 @@ const batchService = {
     return api.post('/product-batches/fefo/allocate', data);
   },
 
+  // Xuất kho theo FEFO - xuất 1 sản phẩm mỗi lần
   async exportFEFO(data: {
     branch_id: number;
-    items: Array<{
-      product_id: number;
-      quantity: number;
-    }>;
+    product_id: number;
+    quantity: number;
+    reference_type: 'manual_export' | 'order_fulfillment' | 'transfer' | 'damage' | 'sample' | 'return_to_supplier';
+    reference_id?: number;
+    note?: string;
   }) {
     return api.post('/product-batches/fefo/export', data);
   },
 
+  // Nhập kho - tạo lô hàng mới
   async importBatch(data: {
     product_id: number;
     branch_id: number;
+    batch_number: string;
     quantity: number;
+    manufacture_date: string;
+    expiry_date: string;
     cost_price: number;
-    manufacturing_date?: string;
-    expiry_date?: string;
-    supplier_id?: number;
-    batch_number?: string;
+    selling_price?: number;
+    supplier_id: number;
+    note?: string;
   }) {
+    return api.post('/product-batches', data);
+  },
+
+  // Nhập thêm vào lô hiện có
+  async addStockToExistingBatch(data: {
+    batch_id?: number;
+    quantity: number;
+    note?: string;
+  }) {
+    if (data.batch_id) {
+      return api.post(`/product-batches/${data.batch_id}/add-stock`, {
+        quantity: data.quantity,
+        note: data.note
+      });
+    }
     return api.post('/product-batches/import', data);
   },
 
