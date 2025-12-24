@@ -43,8 +43,9 @@ export const useStockTransfer = () => {
         status: transfer.status === 'pending' ? 'Pending' 
               : transfer.status === 'approved' ? 'Approved'
               : transfer.status === 'shipped' ? 'Shipped'
-              : transfer.status === 'received' ? 'Completed'
-              : 'Cancelled',
+              : transfer.status === 'completed' ? 'Completed'  // ✅ FIX: Backend trả về 'completed' không phải 'received'
+              : transfer.status === 'cancelled' ? 'Cancelled'
+              : 'Cancelled',  // Default fallback
         createdDate: new Date(transfer.created_at).toLocaleString('vi-VN'),
         createdBy: transfer.created_by_user?.full_name || `User #${transfer.created_by}`,
         items: (transfer.items || transfer.transfer_items || []).map((item: any) => ({
